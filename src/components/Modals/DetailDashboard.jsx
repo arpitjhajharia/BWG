@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/preserve-manual-memoization */
 import React, { useMemo } from 'react';
 import { Icons } from '../ui/Icons';
 import { Button } from '../ui/Button';
@@ -7,16 +8,29 @@ import { InlineTask } from '../modules/TaskBoard';
 import { formatMoney, formatDate } from '../../utils/helpers';
 
 export const DetailDashboard = ({ detailView, setDetailView, data, actions, setModal, userProfiles }) => {
-
-    const { type, data: companyData } = detailView;
+    // 1. Safe Destructuring: If no data, use an empty object {} to prevent crashes
+    const { type, data: rawCompanyData } = detailView;
+    const companyData = rawCompanyData || {};
     const { contacts, tasks, quotesReceived, quotesSent, orders, products, skus } = data;
     const isVendor = type === 'vendor';
 
-    // --- DATA FILTERING ---
-    const relatedContacts = contacts.filter(c => c.companyId === companyData.id);
-    const relatedTasks = tasks.filter(t => t.relatedId === companyData.id || t.relatedClientId === companyData.id || t.relatedVendorId === companyData.id);
-    const relatedQuotes = isVendor ? quotesReceived.filter(q => q.vendorId === companyData.id) : quotesSent.filter(q => q.clientId === companyData.id);
-    const relatedOrders = orders.filter(o => o.companyId === companyData.id).sort((a, b) => b.date.localeCompare(a.date));
+    // 2. Safe Filtering: Check if companyData.id exists before filtering
+    // If modal is closed (companyData.id is undefined), these arrays become empty []
+    const relatedContacts = companyData.id ? contacts.filter(c => c.companyId === companyData.id) : [];
+
+    const relatedTasks = companyData.id ? tasks.filter(t =>
+        t.relatedId === companyData.id ||
+        t.relatedClientId === companyData.id ||
+        t.relatedVendorId === companyData.id
+    ) : [];
+
+    const relatedQuotes = companyData.id ? (
+        isVendor
+            ? quotesReceived.filter(q => q.vendorId === companyData.id)
+            : quotesSent.filter(q => q.clientId === companyData.id)
+    ) : [];
+
+    const relatedOrders = companyData.id ? orders.filter(o => o.companyId === companyData.id).sort((a, b) => b.date.localeCompare(a.date)) : [];
 
     // Sort Tasks
     const sortedTasks = [...relatedTasks].sort((a, b) => {
@@ -27,29 +41,25 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
 
     // Calculate Values
     let potentialValue = 0;
-    if (isVendor) {
-        potentialValue = relatedQuotes.reduce((acc, q) => acc + (q.price * q.moq), 0);
-    } else {
-        potentialValue = relatedQuotes.filter(q => q.status === 'Active').reduce((acc, q) => acc + (q.sellingPrice * q.moq), 0);
+    if (companyData.id) {
+        if (isVendor) {
+            potentialValue = relatedQuotes.reduce((acc, q) => acc + (q.price * q.moq), 0);
+        } else {
+            potentialValue = relatedQuotes.filter(q => q.status === 'Active').reduce((acc, q) => acc + (q.sellingPrice * q.moq), 0);
+        }
     }
     const totalOrderValue = relatedOrders.reduce((acc, o) => acc + (o.amount || 0), 0);
 
-    // Group Quotes (Updated: Now groups for BOTH Vendors and Clients)
-    // eslint-disable-next-line react-hooks/preserve-manual-memoization
+    // Group Quotes (Now safe because relatedQuotes is [] if closed)
     const quoteGroups = useMemo(() => {
-        // --- REMOVED THE LINE BELOW ---
-        // if (isVendor) return relatedQuotes.map(q => ({ skuId: q.skuId, quotes: [q] }));
-
         const groups = {};
         relatedQuotes.forEach(q => {
             if (!groups[q.skuId]) groups[q.skuId] = [];
             groups[q.skuId].push(q);
         });
 
-        // Sort quotes within groups by createdAt descending (Latest first)
         Object.keys(groups).forEach(key => {
             groups[key].sort((a, b) => {
-                // Robust date handling for Firestore timestamps vs Strings
                 const dateA = a.createdAt?.seconds ? a.createdAt.seconds : new Date(a.createdAt || 0).getTime();
                 const dateB = b.createdAt?.seconds ? b.createdAt.seconds : new Date(b.createdAt || 0).getTime();
                 return dateB - dateA;
@@ -57,9 +67,10 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
         });
 
         return Object.keys(groups).map(skuId => ({ skuId, quotes: groups[skuId] }));
-    }, [relatedQuotes]); // Removed isVendor dependency
+    }, [relatedQuotes]);
 
-    if (!detailView.open) return null;
+    // 3. FINAL GATE: Stop rendering if closed
+    if (!detailView.open || !rawCompanyData) return null;
 
     // --- ACTION HANDLERS ---
 
