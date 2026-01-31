@@ -1133,7 +1133,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
             <div className="bg-white rounded border border-slate-200 shadow-2xl w-full max-w-lg flex flex-col max-h-[95vh] animate-in fade-in zoom-in duration-200">
                 <div className="flex-1 overflow-auto p-6 scroller">
                     {renderContent()}

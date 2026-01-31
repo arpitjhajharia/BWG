@@ -12,7 +12,7 @@ export const ActiveQuotesModal = ({ activeQuotesView, setActiveQuotesView, data 
     const activeQuotes = quotesSent.filter(q => skuIds.includes(q.skuId) && q.status === 'Active');
 
     return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-fade-in">
                 <div className="p-6 border-b border-slate-200 flex justify-between items-center">
                     <div>

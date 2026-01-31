@@ -171,9 +171,9 @@ function App() {
 
       </div>
 
-      <AppModal modal={modal} setModal={setModal} data={data} actions={actions} currentUser={currentUser} />
       <DetailDashboard detailView={detailView} setDetailView={setDetailView} data={data} actions={actions} setModal={setModal} userProfiles={data.userProfiles} />
       <ActiveQuotesModal activeQuotesView={activeQuotesView} setActiveQuotesView={setActiveQuotesView} data={data} />
+      <AppModal modal={modal} setModal={setModal} data={data} actions={actions} currentUser={currentUser} />
     </div>
   );
 }
