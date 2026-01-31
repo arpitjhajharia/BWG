@@ -69,64 +69,107 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen font-sans text-slate-900 bg-slate-50 flex flex-col">
+    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
 
-      {/* --- TOP HEADER --- */}
-      <header className="fixed top-0 w-full h-16 bg-slate-900 text-white z-40 flex items-center justify-between px-4 shadow-md">
-        <div className="flex items-center gap-4">
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 rounded hover:bg-slate-800 transition-colors text-slate-300 hover:text-white">
-            <Icons.Menu className="w-6 h-6" />
-          </button>
-          {/* --- BRANDING / LOGO --- */}
-          <div className="flex items-center gap-3 select-none cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-            <img
-              src={`${import.meta.env.BASE_URL}logo.png`}
-              alt="Biowearth Dashboard"
-              className="h-20 w-auto object-contain"
-            />
+      {/* --- SIDEBAR (ERPNext "Desk") --- */}
+      <aside className={`w-[220px] flex-shrink-0 bg-[#F8F9FA] border-r border-slate-200 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-[220px]'} lg:translate-x-0 lg:static fixed z-50 h-full`}>
+        {/* Brand */}
+        <div className="h-14 flex items-center px-5 border-b border-slate-200/60 bg-white">
+          <div className="font-bold text-lg tracking-tight text-slate-800 flex items-center gap-2.5">
+            <div className="w-7 h-7 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-black shadow-sm">N</div>
+            <span className="font-black text-slate-900 tracking-tighter">NIZONA<span className="text-blue-600">OS</span></span>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right hidden md:block">
-            <div className="text-sm font-bold">{currentUser.name}</div>
-            <div className="text-[10px] text-blue-400 uppercase tracking-wider">{currentUser.role}</div>
-          </div>
-          <button onClick={() => setCurrentUser(null)} className="p-2 text-slate-400 hover:text-white transition-colors" title="Logout"><Icons.Logout className="w-5 h-5" /></button>
-        </div>
-      </header>
 
-      {/* --- SIDEBAR --- */}
-      {isSidebarOpen && <div className="fixed inset-0 bg-black/50 z-50 transition-opacity" onClick={() => setIsSidebarOpen(false)} />}
-      <aside className={`fixed top-0 left-0 h-full w-64 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-          <span className="font-bold text-slate-800 text-lg">Menu</span>
-          <button onClick={() => setIsSidebarOpen(false)} className="text-slate-400 hover:text-red-500"><Icons.X className="w-6 h-6" /></button>
-        </div>
-        <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100%-70px)]">
+        {/* Modules Navigation */}
+        <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-0.5 custom-scrollbar">
+          <div className="px-3 py-2 text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2 opacity-70">Workspace Matrix</div>
           {navItems.map(i => (
-            <button key={i.id} onClick={() => handleNavClick(i.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === i.id ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-              <i.icon className={`w-5 h-5 ${activeTab === i.id ? 'text-blue-600' : 'text-slate-400'}`} />
+            <button
+              key={i.id}
+              onClick={() => handleNavClick(i.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded transition-all text-[12px] font-bold uppercase tracking-tight ${activeTab === i.id ? 'bg-white text-blue-600 shadow-sm border border-slate-200 ring-4 ring-blue-50/20' : 'text-slate-500 hover:bg-slate-200/40 hover:text-slate-800'}`}
+            >
+              <i.icon className={`w-4 h-4 transition-colors ${activeTab === i.id ? 'text-blue-500' : 'text-slate-300 group-hover:text-slate-500'}`} />
               {i.label}
             </button>
           ))}
         </nav>
+
+        {/* User Profile (Bottom) */}
+        <div className="p-4 border-t border-slate-200/80 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+          <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group border border-transparent hover:border-slate-100">
+            <div className="w-9 h-9 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-500 group-hover:bg-blue-50 group-hover:border-blue-100 group-hover:text-blue-600 transition-all uppercase">
+              {currentUser.name.charAt(0)}{currentUser.name.split(' ')[1]?.charAt(0)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[12px] font-bold text-slate-800 truncate leading-tight">{currentUser.name}</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{currentUser.role}</div>
+            </div>
+            <button onClick={() => setCurrentUser(null)} className="text-slate-300 hover:text-red-500 transition-colors p-1" title="Logout">
+              <Icons.Logout className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </aside>
 
-      {/* --- CONTENT --- */}
-      <main className="flex-1 pt-20 pb-6 px-4 lg:px-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto animate-fade-in">
-          {activeTab === 'dashboard' && <DashboardOverview data={data} actions={actions} setActiveTab={setActiveTab} />}
-          {activeTab === 'products' && <ProductMaster data={data} actions={actions} setModal={setModal} setActiveQuotesView={setActiveQuotesView} onNavigateToFormulation={handleFormulationNavigation} />}
-          {activeTab === 'formulations' && <Formulations data={data} actions={actions} setModal={setModal} targetFormulationId={targetFormulationId} />}
-          {activeTab === 'ors' && <ORSMaster data={data} actions={actions} setModal={setModal} />}
-          {activeTab === 'rfq' && <RFQMaster data={data} actions={actions} setModal={setModal} />} {/* <--- Render RFQ */}
-          {activeTab === 'vendors' && <CompanyMaster type="vendor" data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} />}
-          {activeTab === 'clients' && <CompanyMaster type="client" data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} />}
-          {activeTab === 'quotes' && <QuotesTab data={data} actions={actions} setModal={setModal} />}
-          {activeTab === 'tasks' && <TaskBoard data={data} actions={actions} setModal={setModal} />}
-          {activeTab === 'admin' && <AdminPanel currentUser={currentUser} data={data} actions={actions} setModal={setModal} />}
-        </div>
-      </main>
+      {/* --- MAIN CONTENT AREA --- */}
+      <div className="flex-1 flex flex-col min-w-0 bg-white">
+
+        {/* Top Header (Breadcrumbs/Search) */}
+        <header className="h-14 border-b border-slate-200 flex items-center justify-between px-6 bg-white z-40">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden p-1.5 text-slate-500 hover:bg-slate-100 rounded border border-slate-200">
+              <Icons.Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center text-[11px] font-bold uppercase tracking-widest text-slate-400">
+              <span className="hover:text-blue-600 cursor-pointer transition-colors">DESK</span>
+              <Icons.ChevronRight className="w-3.5 h-3.5 mx-2 text-slate-300" />
+              <span className="text-slate-800 font-black">{navItems.find(i => i.id === activeTab)?.label}</span>
+            </div>
+          </div>
+
+          {/* Global Search Bar (Visual Only) */}
+          <div className="flex-1 max-w-lg mx-8 hidden md:block">
+            <div className="relative group">
+              <Icons.Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+              <input
+                type="text"
+                placeholder="COMMAND + K TO SEARCH..."
+                className="w-full bg-slate-50 border border-slate-200/60 hover:border-slate-300 focus:border-blue-400 focus:ring-4 focus:ring-blue-50/50 rounded py-2 pl-10 pr-4 text-[10px] font-bold tracking-widest transition-all outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Right Actions */}
+          <div className="flex items-center gap-1.5">
+            <button className="p-2 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-50 transition-all" title="Help">
+              <Icons.Info className="w-4 h-4" />
+            </button>
+            <div className="w-px h-4 bg-slate-200 mx-1"></div>
+            <button className="p-2 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-50 transition-all" title="Settings">
+              <Icons.Settings className="w-4 h-4" />
+            </button>
+          </div>
+        </header>
+
+        {/* Scrollable Workspace */}
+        <main className="flex-1 overflow-auto bg-slate-50/30 p-4 lg:p-6 scroller">
+          <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
+            {activeTab === 'dashboard' && <DashboardOverview data={data} actions={actions} setActiveTab={setActiveTab} />}
+            {activeTab === 'products' && <ProductMaster data={data} actions={actions} setModal={setModal} setActiveQuotesView={setActiveQuotesView} onNavigateToFormulation={handleFormulationNavigation} />}
+            {activeTab === 'formulations' && <Formulations data={data} actions={actions} setModal={setModal} targetFormulationId={targetFormulationId} />}
+            {activeTab === 'ors' && <ORSMaster data={data} actions={actions} setModal={setModal} />}
+            {activeTab === 'rfq' && <RFQMaster data={data} actions={actions} setModal={setModal} />}
+            {activeTab === 'vendors' && <CompanyMaster type="vendor" data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} />}
+            {activeTab === 'clients' && <CompanyMaster type="client" data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} />}
+            {activeTab === 'quotes' && <QuotesTab data={data} actions={actions} setModal={setModal} />}
+            {activeTab === 'tasks' && <TaskBoard data={data} actions={actions} setModal={setModal} />}
+            {activeTab === 'admin' && <AdminPanel currentUser={currentUser} data={data} actions={actions} setModal={setModal} />}
+          </div>
+        </main>
+
+      </div>
 
       <AppModal modal={modal} setModal={setModal} data={data} actions={actions} currentUser={currentUser} />
       <DetailDashboard detailView={detailView} setDetailView={setDetailView} data={data} actions={actions} setModal={setModal} userProfiles={data.userProfiles} />

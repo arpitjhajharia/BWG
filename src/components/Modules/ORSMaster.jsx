@@ -3,7 +3,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Icons } from '../ui/Icons';
 import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
 import { formatDate } from '../../utils/helpers';
 
 export const ORSMaster = ({ data, actions, setModal }) => {
@@ -159,94 +158,80 @@ export const ORSMaster = ({ data, actions, setModal }) => {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                <div>
-                    <h2 className="text-xl font-bold text-slate-800">OEM Request Sheets</h2>
-                    <p className="text-sm text-slate-500">Manage manufacturing orders</p>
+        <div className="flex flex-col h-full animate-fade-in space-y-4">
+            {/* Header Toolbar */}
+            <div className="flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-2">
+                    <h2 className="font-bold text-lg text-slate-800">ORS</h2>
+                    <span className="text-slate-400 font-light text-lg">/</span>
+                    <span className="text-[13px] font-semibold text-slate-500">{filtered.length} records</span>
                 </div>
-                <div className="flex gap-2">
-                    <input
-                        placeholder="Search Vendor or Client..."
-                        className="p-2 border rounded text-sm w-64 focus:ring-2 focus:ring-blue-100 outline-none"
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                    />
-                    <Button icon={Icons.Plus} onClick={() => setModal({ open: true, type: 'ors' })}>New ORS</Button>
+                <div className="flex items-center gap-2">
+                    <div className="relative group">
+                        <input
+                            className="bg-white border border-slate-200 text-xs rounded-md pl-8 pr-3 py-1.5 focus:ring-1 focus:ring-blue-500 outline-none w-48 transition-all hover:border-slate-300"
+                            placeholder="Search ORS..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                        <Icons.Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                    </div>
+                    <Button icon={Icons.Plus} onClick={() => setModal({ open: true, type: 'ors' })}>New</Button>
                 </div>
             </div>
 
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+            {/* Dense Data Table */}
+            <div className="flex-1 overflow-auto bg-white rounded border border-slate-200 shadow-sm scroller">
                 <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-50 text-xs font-bold text-slate-500 border-b border-slate-200">
+                    <thead className="sticky top-0 bg-slate-50 text-xs font-semibold text-slate-500 border-b border-slate-200 z-10 shadow-sm">
                         <tr>
-                            <th className="p-4">Date</th>
-                            <th className="p-4">Vendor / Client</th>
-                            <th className="p-4">SKU</th>
-                            <th className="p-4">Qty & Cost</th>
-                            <th className="p-4">Terms</th>
-                            <th className="p-4 text-right">Actions</th>
+                            <th className="px-3 py-2 w-32">Date</th>
+                            <th className="px-3 py-2 w-48">Vendor / Client</th>
+                            <th className="px-3 py-2">SKU Details</th>
+                            <th className="px-3 py-2 w-32">Qty & Cost</th>
+                            <th className="px-3 py-2 w-32">Terms</th>
+                            <th className="px-3 py-2 w-24 text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
+                    <tbody className="divide-y divide-slate-100 text-[13px]">
                         {filtered.map(item => (
-                            <tr key={item.id} className="hover:bg-slate-50 group">
-                                <td className="p-4">
-                                    <div className="font-bold text-slate-800">{formatDate(item.date)}</div>
-                                </td>
-                                <td className="p-4">
-                                    {/* Smart Display of Parties */}
+                            <tr key={item.id} className="hover:bg-blue-50/30 group transition-colors border-b border-slate-50 last:border-0">
+                                <td className="px-3 py-2 font-mono text-slate-500 text-[11px] align-top">{formatDate(item.date)}</td>
+                                <td className="px-3 py-2 align-top">
                                     {(item.recipientType === 'Both' || !item.recipientType) && (
-                                        <>
-                                            <div className="text-slate-700 font-medium">V: {getVendorName(item.vendorId)}</div>
-                                            <div className="text-slate-500 text-xs">C: {getClientName(item.clientId)}</div>
-                                        </>
+                                        <div className="flex flex-col gap-0.5">
+                                            <div className="flex items-center gap-1"><span className="text-[10px] text-slate-400 bg-slate-50 px-1 rounded border border-slate-100">V</span> <span className="font-medium text-slate-700 truncate max-w-[150px]">{getVendorName(item.vendorId)}</span></div>
+                                            <div className="flex items-center gap-1"><span className="text-[10px] text-slate-400 bg-slate-50 px-1 rounded border border-slate-100">C</span> <span className="font-medium text-slate-700 truncate max-w-[150px]">{getClientName(item.clientId)}</span></div>
+                                        </div>
                                     )}
-                                    {item.recipientType === 'Vendor' && <div className="text-slate-700 font-medium">{getVendorName(item.vendorId)}</div>}
-                                    {item.recipientType === 'Client' && <div className="text-slate-700 font-medium">{getClientName(item.clientId)}</div>}
+                                    {item.recipientType === 'Vendor' && <div className="font-medium text-slate-700">{getVendorName(item.vendorId)}</div>}
+                                    {item.recipientType === 'Client' && <div className="font-medium text-slate-700">{getClientName(item.clientId)}</div>}
                                 </td>
-                                <td className="p-4">
-                                    <div className="text-slate-800 font-medium max-w-[200px] truncate" title={getSkuDetails(item.skuId)}>
-                                        {getSkuDetails(item.skuId)}
-                                    </div>
+                                <td className="px-3 py-2 align-top text-slate-600">
+                                    <div className="font-semibold text-slate-800 text-[12px]">{getSkuDetails(item.skuId).split(' - ')[0]}</div>
+                                    <div className="text-[11px] text-slate-500">{getSkuDetails(item.skuId).split(' - ')[1]}</div>
                                 </td>
-                                <td className="p-4">
-                                    <div className="text-slate-800">{item.qty} units</div>
-                                    <div className="text-xs text-slate-500 font-mono">
-                                        {item.currency} {item.costPerUnit}
-                                    </div>
+                                <td className="px-3 py-2 align-top">
+                                    <div className="font-bold text-slate-800">{item.qty}</div>
+                                    <div className="text-[11px] text-slate-500 font-mono">@ {item.currency}{item.costPerUnit}</div>
                                 </td>
-                                <td className="p-4">
-                                    <Badge color="blue">{item.priceTerms || '-'}</Badge>
-                                    <div className="text-[10px] text-slate-400 mt-1">{item.countryOfSale}</div>
+                                <td className="px-3 py-2 align-top">
+                                    <span className="inline-block px-1.5 py-0.5 rounded border border-blue-100 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-wider mb-1">
+                                        {item.priceTerms || '-'}
+                                    </span>
+                                    <div className="text-[10px] text-slate-400">{item.countryOfSale}</div>
                                 </td>
-                                <td className="p-4 text-right">
-                                    <div className="flex justify-end gap-2">
-                                        <button
-                                            onClick={(e) => generatePDF(e, item)}
-                                            className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                                            title="Download PDF"
-                                        >
-                                            <Icons.File className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => setModal({ open: true, type: 'ors', data: item, isEdit: true })}
-                                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                        >
-                                            <Icons.Edit className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => actions.del('ors', item.id)}
-                                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                        >
-                                            <Icons.Trash className="w-4 h-4" />
-                                        </button>
+                                <td className="px-3 py-2 text-right align-top">
+                                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={(e) => generatePDF(e, item)} className="p-1 hover:bg-green-100 rounded text-slate-400 hover:text-green-600 transition-colors" title="PDF"><Icons.File className="w-3.5 h-3.5" /></button>
+                                        <button onClick={() => setModal({ open: true, type: 'ors', data: item, isEdit: true })} className="p-1 hover:bg-blue-100 rounded text-slate-400 hover:text-blue-600 transition-colors" title="Edit"><Icons.Edit className="w-3.5 h-3.5" /></button>
+                                        <button onClick={() => actions.del('ors', item.id)} className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600 transition-colors" title="Delete"><Icons.Trash className="w-3.5 h-3.5" /></button>
                                     </div>
                                 </td>
                             </tr>
                         ))}
                         {filtered.length === 0 && (
-                            <tr><td colSpan="6" className="p-8 text-center text-slate-400 italic">No ORS records found.</td></tr>
+                            <tr><td colSpan="6" className="p-8 text-center text-slate-400 text-xs italic">No ORS records found. Click "New" to create one.</td></tr>
                         )}
                     </tbody>
                 </table>

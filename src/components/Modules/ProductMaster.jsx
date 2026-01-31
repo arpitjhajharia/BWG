@@ -43,7 +43,8 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
             doc.setFontSize(10);
             doc.text(`SKU Code: ${sku.name}`, 14, 30);
             doc.text(`Format: ${product?.format || '-'}`, 14, 35);
-            doc.text(`Pack: ${sku.packSize}${sku.unit} (${sku.packType})`, 14, 40);
+            doc.text(`Serving Size: ${formulation?.servingSizeValue || '-'}${formulation?.servingSizeUnit || ''}`, 14, 40);
+            doc.text(`Pack: ${sku.packSize}${sku.unit} (${sku.packType})`, 14, 45);
 
             let finalY = 50;
 
@@ -57,14 +58,15 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
                 const ingBody = formulation.ingredients.map(ing => [
                     ing.name,
                     ing.type || 'Active',
-                    ing.per100g || '-',
+                    `${ing.per100g || '0'}%`,
                     ing.perServing || '-',
                     ing.perSku || '-'
                 ]);
 
+                const dosageUnit = formulation.dosageUnit || '';
                 autoTable(doc, {
                     startY: finalY + 5,
-                    head: [['Ingredient', 'Type', 'Qty/100g', 'Qty/Serv', 'Qty/Unit']],
+                    head: [['Ingredient', 'Type', 'Qty %', `Qty/Serv (${dosageUnit})`, `Qty/Unit (${dosageUnit})`]],
                     body: ingBody,
                     theme: 'striped',
                     headStyles: { fillColor: [71, 85, 105] },
@@ -115,20 +117,58 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className="relative flex-1 md:flex-none"><Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" /><input className="pl-9 pr-4 py-2 border rounded-lg text-sm focus:ring-2 ring-blue-100 outline-none w-full md:w-64" placeholder="Search products..." value={localSearch} onChange={e => setLocalSearch(e.target.value)} /></div>
-                    <div className="flex items-center gap-2"><Icons.Filter className="text-slate-400 w-4 h-4" /><select className="text-sm border-none bg-transparent focus:ring-0 font-medium text-slate-600 cursor-pointer" onChange={e => setFilterFormat(e.target.value)}><option value="All">All Formats</option>{(settings?.formats || []).map(f => <option key={f} value={f}>{f}</option>)}</select></div>
-                    <div className="flex items-center gap-2 ml-2">
-                        <span className="text-xs text-slate-400">Sort:</span>
-                        <select className="text-sm border-none bg-transparent focus:ring-0 font-medium text-slate-600 cursor-pointer" onChange={e => setSort(prev => ({ ...prev, key: e.target.value }))}><option value="name">Name</option><option value="format">Format</option></select>
-                        <button onClick={() => setSort(prev => ({ ...prev, dir: prev.dir === 'asc' ? 'desc' : 'asc' }))} className="text-slate-500 hover:text-blue-600">{sort.dir === 'asc' ? <Icons.ArrowUp className="w-3 h-3" /> : <Icons.ArrowDown className="w-3 h-3" />}</button>
+        <div className="flex flex-col h-full animate-fade-in space-y-4">
+            <div className="flex justify-between items-center shrink-0 border-b border-slate-200 pb-3">
+                <div className="flex items-center gap-2">
+                    <div className="p-2 bg-slate-100 rounded border border-slate-200">
+                        <Icons.Product className="w-5 h-5 text-slate-600" />
+                    </div>
+                    <div>
+                        <h2 className="font-bold text-lg text-slate-800 leading-tight">Product Catalog</h2>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredProducts.length} Product Models Managed</span>
+                        </div>
                     </div>
                 </div>
-                <Button icon={Icons.Plus} onClick={() => setModal({ open: true, type: 'product' })}>New Product</Button>
+
+                <div className="flex items-center gap-3">
+                    <div className="relative group">
+                        <input
+                            className="bg-white border border-slate-300 text-[11px] font-medium text-slate-600 rounded-md pl-8 pr-3 py-1.5 focus:ring-1 focus:ring-blue-500 outline-none w-52 transition-all hover:border-slate-400 placeholder:text-slate-300"
+                            placeholder="SEARCH CATALOG..."
+                            value={localSearch}
+                            onChange={e => setLocalSearch(e.target.value)}
+                        />
+                        <Icons.Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                    </div>
+
+                    <div className="relative group">
+                        <select
+                            className="appearance-none bg-white border border-slate-300 text-[10px] font-bold text-slate-500 uppercase tracking-widest rounded-md pl-3 pr-8 py-1.5 focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer hover:border-slate-400 transition-colors"
+                            value={filterFormat}
+                            onChange={e => setFilterFormat(e.target.value)}
+                        >
+                            <option value="All">All Formats</option>
+                            {(settings?.formats || []).map(f => <option key={f} value={f}>{f}</option>)}
+                        </select>
+                        <Icons.ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+                    </div>
+
+                    <div className="flex bg-slate-100 rounded-md p-0.5 border border-slate-200">
+                        <button
+                            onClick={() => setSort(prev => ({ ...prev, key: 'name', dir: prev.key === 'name' ? (prev.dir === 'asc' ? 'desc' : 'asc') : 'asc' }))}
+                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-all flex items-center gap-1 ${sort.key === 'name' ? 'bg-white shadow-sm text-blue-600 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                        >
+                            Sort A-Z
+                            {sort.key === 'name' && (sort.dir === 'asc' ? <Icons.ArrowDown className="w-2.5 h-2.5" /> : <Icons.ArrowUp className="w-2.5 h-2.5" />)}
+                        </button>
+                    </div>
+
+                    <Button icon={Icons.Plus} onClick={() => setModal({ open: true, type: 'product' })} className="shadow-sm uppercase text-[11px] tracking-widest px-5">+ New Product</Button>
+                </div>
             </div>
-            <div className="space-y-4">
+
+            <div className="flex flex-col gap-3 pb-10">
                 {filteredProducts.map(p => {
                     const pSkus = skus.filter(s => s.productId === p.id);
                     const isExpanded = expandedProduct === p.id;
@@ -137,75 +177,115 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
                     const activeQuotesCount = quotesSent.filter(q => skuIds.includes(q.skuId) && q.status === 'Active').length;
 
                     return (
-                        <div key={p.id} className={`bg-white rounded-lg border border-slate-200 transition-all duration-200 ${isExpanded ? 'ring-2 ring-blue-100 shadow-md' : 'hover:shadow-sm'}`}>
-                            <div className="p-5 flex items-center justify-between cursor-pointer" onClick={() => setExpandedProduct(isExpanded ? null : p.id)}>
-                                <div className="flex items-center gap-5">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg text-slate-600 bg-slate-100`}>{p.name.charAt(0)}</div>
-                                    <div>
-                                        <div className="flex items-center gap-3">
-                                            <h3 className="font-bold text-lg text-slate-800">{p.name}</h3>
-                                            <Badge color="slate">{p.format}</Badge>
-                                            {p.driveLink && <a href={p.driveLink} target="_blank" onClick={e => e.stopPropagation()} className="text-blue-400 hover:text-blue-600"><Icons.Link className="w-4 h-4" /></a>}
+                        <div key={p.id} className={`bg-white border transition-all overflow-hidden ${isExpanded ? 'border-blue-300 ring-1 ring-blue-100 shadow-md transform scale-[1.002]' : 'border-slate-200 hover:border-blue-400 shadow-sm'}`}>
+                            <div className={`p-3.5 flex items-center justify-between cursor-pointer group transition-colors ${isExpanded ? 'bg-blue-50/30' : 'hover:bg-slate-50/30'}`} onClick={() => setExpandedProduct(isExpanded ? null : p.id)}>
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <div className={`w-11 h-11 rounded border flex items-center justify-center font-bold text-sm transition-colors ${isExpanded ? 'bg-blue-100 border-blue-200 text-blue-700 shadow-inner' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                                        {p.name.charAt(0)}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="font-bold text-[15px] text-slate-800 leading-none">{p.name}</h3>
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200">{p.format}</span>
+                                            {p.driveLink && <a href={p.driveLink} target="_blank" onClick={e => e.stopPropagation()} className="text-slate-300 hover:text-blue-500 transition-colors"><Icons.Link className="w-3.5 h-3.5" /></a>}
                                         </div>
-                                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
-                                            <span>{pSkus.length} Variants</span>
-                                            <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                                            <span>{clientIds.length} Clients</span>
+                                        <div className="flex items-center gap-4 text-[10px] uppercase font-bold tracking-wider">
+                                            <div className="flex items-center gap-1.5 text-slate-500">
+                                                <Icons.Columns className="w-3 h-3 text-slate-300" />
+                                                <span>{pSkus.length} <span className="text-[9px] opacity-70">Variations</span></span>
+                                            </div>
+                                            <div className="w-px h-2.5 bg-slate-200"></div>
+                                            <div className="flex items-center gap-1.5 text-slate-500">
+                                                <Icons.Users className="w-3 h-3 text-slate-300" />
+                                                <span>{clientIds.length} <span className="text-[9px] opacity-70">Clients</span></span>
+                                            </div>
                                             {activeQuotesCount > 0 && (
                                                 <>
-                                                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                                                    <span
+                                                    <div className="w-px h-2.5 bg-slate-200"></div>
+                                                    <div
                                                         onClick={(e) => { e.stopPropagation(); setActiveQuotesView({ open: true, productId: p.id }); }}
-                                                        className="text-green-600 font-bold hover:underline cursor-pointer bg-green-50 px-1.5 py-0.5 rounded border border-green-200"
+                                                        className="text-emerald-600 flex items-center gap-1.5 hover:text-emerald-700 transition-colors"
                                                     >
-                                                        {activeQuotesCount} Active Quotes
-                                                    </span>
+                                                        <Icons.Money className="w-3 h-3" />
+                                                        <span>{activeQuotesCount} Active <span className="text-[9px] opacity-70">Quotes</span></span>
+                                                    </div>
                                                 </>
                                             )}
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-4"><button onClick={(e) => { e.stopPropagation(); setModal({ open: true, type: 'product', data: p, isEdit: true }) }} className="text-slate-300 hover:text-blue-500"><Icons.Edit className="w-4 h-4" /></button>{isExpanded ? <Icons.ChevronDown className="text-slate-400" /> : <Icons.ChevronRight className="text-slate-400" />}</div>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setModal({ open: true, type: 'product', data: p, isEdit: true }) }}
+                                        className="p-1.5 text-slate-300 hover:text-blue-600 transition-all rounded hover:bg-white hover:border border-transparent hover:border-blue-100"
+                                    >
+                                        <Icons.Edit className="w-4 h-4" />
+                                    </button>
+                                    <div className={`text-slate-300 transition-all duration-300 p-1 ${isExpanded ? 'rotate-180 text-blue-500 bg-white rounded-full shadow-sm' : ''}`}>
+                                        <Icons.ChevronDown className="w-4 h-4" />
+                                    </div>
+                                </div>
                             </div>
                             {isExpanded && (
-                                <div className="border-t border-slate-100 bg-slate-50/50 p-5 animate-fade-in">
-                                    <div className="flex justify-between items-center mb-3">
-                                        <h4 className="text-xs font-bold uppercase text-slate-500 tracking-wider">SKU Configuration & Pricing</h4>
-                                        <Button size="sm" variant="secondary" onClick={() => setModal({ open: true, type: 'sku', data: { productId: p.id, productName: p.name } })}>+ Add Variant</Button>
+                                <div className="border-t border-slate-100 bg-slate-50/40 p-3.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div className="flex justify-between items-end mb-3 px-1">
+                                        <div>
+                                            <h4 className="text-[10px] font-bold uppercase text-slate-500 tracking-[0.2em] mb-0.5">Configuration Matrix</h4>
+                                            <div className="text-[9px] font-semibold text-slate-400">Manage SKUs, Pricing, and Formulations</div>
+                                        </div>
+                                        <button
+                                            onClick={() => setModal({ open: true, type: 'sku', data: { productId: p.id, productName: p.name } })}
+                                            className="px-3 py-1 bg-white border border-slate-300 rounded text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:border-blue-400 hover:text-blue-600 transition-all shadow-sm"
+                                        >
+                                            + Add SKU
+                                        </button>
                                     </div>
                                     {pSkus.length > 0 ? (
-                                        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-                                            <table className="w-full text-sm">
-                                                <thead className="bg-slate-50 text-xs text-slate-500 font-semibold border-b border-slate-100">
+                                        <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
+                                            <table className="w-full text-left border-collapse">
+                                                <thead className="bg-slate-50/80 border-b border-slate-200 uppercase">
                                                     <tr>
-                                                        <th className="px-4 py-3 text-left">Variant</th>
-                                                        <th className="px-4 py-3 text-left">Pack</th>
-                                                        <th className="px-4 py-3 text-left">Code</th>
-                                                        <th className="px-4 py-3 text-left">Latest Cost</th>
-                                                        <th className="px-4 py-3 text-right">Actions</th>
+                                                        <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest min-w-[180px]">Model Variant</th>
+                                                        <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest">Pack</th>
+                                                        <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest">Code</th>
+                                                        <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest">Market Benchmark</th>
+                                                        <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest text-right">Control</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100">
                                                     {pSkus.map(s => {
                                                         const latestBuy = quotesReceived.filter(q => q.skuId === s.id).sort((a, b) => b.createdAt - a.createdAt)[0];
                                                         return (
-                                                            <tr key={s.id} className="hover:bg-slate-50">
-                                                                <td className="px-4 py-3 font-medium text-slate-700">{s.variant} {s.flavour && <span className="block text-xs text-slate-400 font-normal">{s.flavour}</span>}</td>
-                                                                <td className="px-4 py-3 text-slate-600">{s.packSize}{s.unit} ({s.packType})</td>
-                                                                <td className="px-4 py-3 font-mono text-xs text-slate-500">{s.name}</td>
-                                                                <td className="px-4 py-3">{latestBuy ? (<div><div className="font-medium text-slate-700">{formatMoney(latestBuy.price, latestBuy.currency)}</div><div className="text-[10px] text-slate-400">via {vendors.find(v => v.id === latestBuy.vendorId)?.companyName}</div></div>) : <span className="text-xs text-slate-400 italic">No quotes</span>}</td>
+                                                            <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group/row">
+                                                                <td className="px-4 py-3">
+                                                                    <div className="flex flex-col gap-0.5">
+                                                                        <span className="font-bold text-slate-700 text-[13px]">{s.variant}</span>
+                                                                        {s.flavour && <span className="text-[9px] font-bold text-blue-500 uppercase tracking-tighter">{s.flavour}</span>}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-4 py-3">
+                                                                    <div className="flex flex-col gap-0.5">
+                                                                        <span className="text-[12px] font-semibold text-slate-600">{s.packSize} {s.unit}</span>
+                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{s.packType}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-4 py-3">
+                                                                    <code className="text-[11px] font-bold text-slate-400 font-mono bg-slate-50 px-1 py-0.5 border border-slate-100 rounded">{s.name}</code>
+                                                                </td>
+                                                                <td className="px-4 py-3">
+                                                                    {latestBuy ? (
+                                                                        <div className="space-y-0.5">
+                                                                            <div className="font-bold text-slate-800 text-[13px]">{formatMoney(latestBuy.price, latestBuy.currency)}</div>
+                                                                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate max-w-[120px]">Latest from <span className="text-blue-500">{vendors.find(v => v.id === latestBuy.vendorId)?.companyName}</span></div>
+                                                                        </div>
+                                                                    ) : <span className="text-[10px] font-bold text-slate-200 uppercase tracking-widest italic">— No History —</span>}
+                                                                </td>
                                                                 <td className="px-4 py-3 text-right">
-                                                                    <div className="flex justify-end gap-2">
-                                                                        <button
-                                                                            onClick={(e) => generateSkuPdf(e, s)}
-                                                                            className="p-1 hover:bg-green-50 rounded text-green-500"
-                                                                            title="Download Spec Sheet"
-                                                                        >
-                                                                            <Icons.File className="w-3 h-3" />
-                                                                        </button>
-                                                                        <button onClick={() => onNavigateToFormulation(s.id)} className="p-1 hover:bg-purple-50 rounded text-purple-500" title="View Formulation"><Icons.List className="w-3 h-3" /></button>
-                                                                        <button onClick={() => setModal({ open: true, type: 'sku', data: s, isEdit: true })} className="p-1 hover:bg-blue-50 rounded text-blue-500"><Icons.Edit className="w-3 h-3" /></button>
-                                                                        <button onClick={() => actions.del('skus', s.id)} className="p-1 hover:bg-red-50 rounded text-red-500"><Icons.X className="w-3 h-3" /></button>
+                                                                    <div className="flex justify-end gap-1.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                                                                        <button onClick={(e) => generateSkuPdf(e, s)} className="p-2 bg-white border border-slate-200 rounded text-green-500 hover:border-green-300 hover:bg-green-50 transition-all shadow-sm" title="Technical Datasheet"><Icons.File className="w-3.5 h-3.5" /></button>
+                                                                        <button onClick={() => onNavigateToFormulation(s.id)} className="p-2 bg-white border border-slate-200 rounded text-purple-500 hover:border-purple-300 hover:bg-purple-50 transition-all shadow-sm" title="Formulation / BOM"><Icons.List className="w-3.5 h-3.5" /></button>
+                                                                        <button onClick={() => setModal({ open: true, type: 'sku', data: s, isEdit: true })} className="p-2 bg-white border border-slate-200 rounded text-blue-500 hover:border-blue-300 hover:bg-blue-50 transition-all shadow-sm" title="Settings"><Icons.Edit className="w-3.5 h-3.5" /></button>
+                                                                        <button onClick={() => { if (confirm('Delete SKU configuration?')) actions.del('skus', s.id) }} className="p-2 bg-white border border-slate-200 rounded text-red-400 hover:border-red-300 hover:bg-red-50 transition-all shadow-sm" title="Remove"><Icons.X className="w-3.5 h-3.5" /></button>
                                                                     </div>
                                                                 </td>
                                                             </tr>
@@ -215,7 +295,11 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
                                             </table>
                                         </div>
                                     ) : (
-                                        <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-lg text-slate-400">No SKUs added yet. Click "Add Variant" to configure.</div>
+                                        <div className="py-12 text-center border-2 border-dashed border-slate-200 bg-white/50 rounded-lg">
+                                            <Icons.Product className="w-10 h-10 text-slate-200 mx-auto mb-2" />
+                                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Matrix Empty</p>
+                                            <p className="text-[10px] text-slate-300 mt-1 uppercase">Initialize SKU configurations to enable operations</p>
+                                        </div>
                                     )}
                                 </div>
                             )}

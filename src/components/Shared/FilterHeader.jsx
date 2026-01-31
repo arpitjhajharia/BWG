@@ -18,18 +18,21 @@ export const FilterHeader = ({ label, sortKey, currentSort, onSort, filterType, 
     };
 
     return (
-        <div className="flex flex-col gap-1 align-bottom">
-            <div className="flex items-center gap-1 cursor-pointer hover:text-blue-600 group" onClick={() => onSort(sortKey)}>
-                <span>{label}</span>
-                <span className="text-[10px] text-slate-400 group-hover:text-blue-500">
-                    {currentSort.key === sortKey ? (currentSort.dir === 'asc' ? '↑' : '↓') : '↕'}
+        <div className="flex flex-col gap-1 w-full bg-white p-1.5 border border-slate-100/50">
+            <div
+                className="flex items-center justify-between cursor-pointer group/label select-none px-0.5"
+                onClick={() => onSort(sortKey)}
+            >
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover/label:text-blue-600 transition-colors">{label}</span>
+                <span className="text-slate-300 group-hover/label:text-blue-400">
+                    {currentSort.key === sortKey ? (currentSort.dir === 'asc' ? <Icons.ArrowUp className="w-2.5 h-2.5" /> : <Icons.ArrowDown className="w-2.5 h-2.5" />) : <Icons.ChevronsUpDown className="w-2.5 h-2.5 opacity-0 group-hover/label:opacity-100" />}
                 </span>
             </div>
 
             {filterType === 'text' && (
                 <input
-                    className="w-full text-xs p-1 border rounded font-normal bg-white focus:ring-1 focus:ring-blue-200 outline-none"
-                    placeholder="Filter..."
+                    className="w-full px-2 py-1 text-[11px] border border-slate-200 rounded-sm bg-slate-50/30 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-300 font-medium text-slate-600"
+                    placeholder={`Filter...`}
                     value={filterValue || ''}
                     onChange={e => onFilter(e.target.value)}
                     onClick={e => e.stopPropagation()}
@@ -39,47 +42,55 @@ export const FilterHeader = ({ label, sortKey, currentSort, onSort, filterType, 
             {filterType === 'multi-select' && (
                 <div className="relative" ref={ref}>
                     <div
-                        className="w-full text-xs p-1 border rounded font-normal bg-white cursor-pointer flex justify-between items-center"
+                        className={`w-full px-2 py-1 text-[11px] border rounded-sm cursor-pointer flex justify-between items-center transition-all ${(!filterValue || filterValue.length === 0) ? 'bg-slate-50/30 border-slate-200 text-slate-400 hover:bg-white' : 'bg-blue-50/30 border-blue-200 text-blue-600 font-bold'}`}
                         onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
                     >
                         <span className="truncate">
-                            {(!filterValue || filterValue.length === 0) ? 'All' : `${filterValue.length} selected`}
+                            {(!filterValue || filterValue.length === 0) ? 'All' : `${filterValue.length} Selected`}
                         </span>
-                        <Icons.ChevronDown className="w-3 h-3 text-slate-400" />
+                        <Icons.ChevronDown className="w-2.5 h-2.5 opacity-50" />
                     </div>
                     {isOpen && (
-                        <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded shadow-lg z-50 p-2 max-h-60 overflow-y-auto">
-                            <div className="mb-2 pb-2 border-b border-slate-100 flex justify-between">
-                                <button className="text-[10px] text-blue-600 hover:underline" onClick={() => onFilter([])}>Clear</button>
-                                <button className="text-[10px] text-blue-600 hover:underline" onClick={() => onFilter(options)}>Select All</button>
+                        <div className="absolute top-full left-0 mt-1 w-52 bg-white border border-slate-300 rounded shadow-xl z-[60] p-1.5 animate-in fade-in zoom-in-95 duration-100">
+                            <div className="flex justify-between items-center px-1 pb-1.5 border-b border-slate-100 mb-1.5">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Select {label}</span>
+                                <div className="flex gap-2">
+                                    <button className="text-[9px] font-bold text-blue-600 hover:bg-blue-50 px-1 rounded uppercase" onClick={() => onFilter([])}>Clear</button>
+                                    <button className="text-[9px] font-bold text-blue-600 hover:bg-blue-50 px-1 rounded uppercase" onClick={() => onFilter(options)}>All</button>
+                                </div>
                             </div>
-                            {options.map(opt => (
-                                <label key={opt} className="flex items-center gap-2 p-1 hover:bg-slate-50 cursor-pointer text-xs">
-                                    <input
-                                        type="checkbox"
-                                        checked={(filterValue || []).includes(opt)}
-                                        onChange={() => handleMultiSelect(opt)}
-                                        className="rounded text-blue-600 focus:ring-0 w-3 h-3"
-                                    />
-                                    <span className="truncate">{opt}</span>
-                                </label>
-                            ))}
+                            <div className="max-h-56 overflow-y-auto scroller space-y-0.5">
+                                {options.map(opt => (
+                                    <label key={opt} className="flex items-center gap-2 px-1.5 py-1 hover:bg-slate-50 rounded-sm cursor-pointer group/opt">
+                                        <input
+                                            type="checkbox"
+                                            checked={(filterValue || []).includes(opt)}
+                                            onChange={() => handleMultiSelect(opt)}
+                                            className="rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
+                                        />
+                                        <span className={`text-[11px] font-medium ${(filterValue || []).includes(opt) ? 'text-blue-600' : 'text-slate-600'}`}>{opt}</span>
+                                    </label>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
             )}
 
             {filterType === 'boolean' && (
-                <select
-                    className="w-full text-xs p-1 border rounded font-normal bg-white focus:ring-1 focus:ring-blue-200 outline-none"
-                    value={filterValue || 'All'}
-                    onChange={e => onFilter(e.target.value)}
-                    onClick={e => e.stopPropagation()}
-                >
-                    <option value="All">All</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                </select>
+                <div className="relative">
+                    <select
+                        className="w-full px-2 py-1 text-[11px] border border-slate-200 rounded-sm bg-slate-50/30 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-100 outline-none transition-all appearance-none cursor-pointer font-medium text-slate-600"
+                        value={filterValue || 'All'}
+                        onChange={e => onFilter(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <option value="All">All Items</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                    <Icons.ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-slate-400 pointer-events-none" />
+                </div>
             )}
         </div>
     );

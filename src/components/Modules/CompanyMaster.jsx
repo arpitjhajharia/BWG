@@ -118,213 +118,245 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
         setSort(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
     };
 
-    const StatusBadge = ({ item }) => (
-        <span className={`text-[10px] font-bold uppercase tracking-wider rounded px-2 py-1 border ${item.status === 'Active' || item.status === 'Hot Lead' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                item.status === 'On Hold' || item.status === 'Cold' ? 'bg-slate-50 text-slate-600 border-slate-200' :
-                    item.status === 'Blacklisted' ? 'bg-red-50 text-red-700 border-red-200' :
-                        'bg-blue-50 text-blue-700 border-blue-200'
-            }`}>
-            {item.status || 'Active'}
-        </span>
-    );
+    const StatusBadge = ({ item }) => {
+        const status = item.status || 'Active';
+        const colorClass = (s) => {
+            if (s === 'Active' || s === 'Hot Lead') return 'text-emerald-700 bg-emerald-50/50 border-emerald-100';
+            if (s === 'On Hold' || s === 'Cold') return 'text-slate-500 bg-slate-50 border-slate-200';
+            if (s === 'Blacklisted') return 'text-red-600 bg-red-50 border-red-100';
+            return 'text-blue-600 bg-blue-50 border-blue-100';
+        };
 
-    const StatusSelect = ({ item }) => (
-        <select
-            className={`text-[10px] font-bold uppercase tracking-wider rounded px-2 py-1 border cursor-pointer focus:ring-0 outline-none appearance-none ${item.status === 'Active' || item.status === 'Hot Lead' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                    item.status === 'On Hold' || item.status === 'Cold' ? 'bg-slate-50 text-slate-600 border-slate-200' :
-                        item.status === 'Blacklisted' ? 'bg-red-50 text-red-700 border-red-200' :
-                            'bg-blue-50 text-blue-700 border-blue-200'
-                }`}
-            value={item.status || ''}
-            onChange={(e) => actions.update(isVendor ? 'vendors' : 'clients', item.id, { status: e.target.value })}
-            onClick={(e) => e.stopPropagation()}
-        >
-            <option value="">Status...</option>
-            {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-    );
+        return (
+            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${colorClass(status)}`}>
+                {status}
+            </span>
+        );
+    };
+
+    const StatusSelect = ({ item }) => {
+        const status = item.status || 'Active';
+        return (
+            <div className="relative w-fit group/status">
+                <select
+                    className="appearance-none bg-transparent pl-0 pr-6 py-1 text-[11px] font-bold text-slate-600 group-hover/status:text-blue-600 cursor-pointer focus:outline-none focus:ring-0 transition-colors uppercase tracking-tight"
+                    value={status}
+                    onChange={(e) => actions.update(isVendor ? 'vendors' : 'clients', item.id, { status: e.target.value })}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <option value="">Status...</option>
+                    {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300">
+                    <Icons.ChevronDown className="w-2.5 h-2.5" />
+                </div>
+            </div>
+        );
+    };
 
     return (
-        <div className="space-y-4 h-[calc(100vh-140px)] flex flex-col">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm shrink-0">
-                <div className="flex items-center gap-3">
-                    <h2 className="font-bold text-lg text-slate-800">{isVendor ? 'Vendors' : 'Clients'}</h2>
-                    <div className="h-6 w-px bg-slate-300 mx-1"></div>
-                    <div className="flex bg-slate-100 rounded p-0.5">
-                        <button onClick={() => setViewMode('list')} className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`} title="List View"><Icons.Table className="w-4 h-4" /></button>
-                        <button onClick={() => setViewMode('board')} className={`p-1.5 rounded ${viewMode === 'board' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`} title="Board View"><Icons.Columns className="w-4 h-4" /></button>
+        <div className="flex flex-col h-full animate-fade-in space-y-4">
+            <div className="flex justify-between items-center shrink-0 border-b border-slate-200 pb-3">
+                <div className="flex items-center gap-2">
+                    <div className="p-2 bg-slate-100 rounded border border-slate-200">
+                        {isVendor ? <Icons.Vendor className="w-5 h-5 text-slate-600" /> : <Icons.Client className="w-5 h-5 text-slate-600" />}
+                    </div>
+                    <div>
+                        <h2 className="font-bold text-lg text-slate-800 leading-tight">{isVendor ? 'Vendor Master' : 'Client Registry'}</h2>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredData.length} Entities Indexed</span>
+                        </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 relative">
+
+                <div className="flex items-center gap-3">
+                    <div className="flex bg-slate-100 rounded-md p-1 border border-slate-200">
+                        <button onClick={() => setViewMode('list')} className={`p-1.5 rounded transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Grid View"><Icons.Table className="w-4 h-4" /></button>
+                        <button onClick={() => setViewMode('board')} className={`p-1.5 rounded transition-all ${viewMode === 'board' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`} title="Kanban View"><Icons.Columns className="w-4 h-4" /></button>
+                    </div>
+
                     <div className="relative">
-                        <button onClick={() => setPropertiesOpen(!propertiesOpen)} className={`text-xs font-medium px-3 py-1.5 rounded border flex items-center gap-2 hover:bg-slate-50 ${propertiesOpen ? 'bg-blue-50 border-blue-200 text-blue-700' : 'border-slate-200 text-slate-600'}`}>
-                            <Icons.Eye className="w-3.5 h-3.5" /> Properties
+                        <button onClick={() => setPropertiesOpen(!propertiesOpen)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-300 text-[11px] font-bold uppercase tracking-wider transition-all hover:bg-slate-50 ${propertiesOpen ? 'bg-slate-100 shadow-inner' : 'bg-white shadow-sm'}`}>
+                            <Icons.Eye className="w-3.5 h-3.5" />
+                            <span>Columns</span>
                         </button>
                         {propertiesOpen && (
-                            <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-2 animate-fade-in">
-                                <div className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider px-2">Show in list</div>
-                                {Object.keys(visibleProps).map(key => (
-                                    <label key={key} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded cursor-pointer">
-                                        <span className="text-sm text-slate-700 capitalize">{key}</span>
-                                        <input type="checkbox" checked={visibleProps[key]} onChange={() => setVisibleProps(prev => ({ ...prev, [key]: !prev[key] }))} className="rounded text-blue-600 focus:ring-0" />
-                                    </label>
-                                ))}
+                            <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-slate-300 rounded shadow-xl z-50 p-2 animate-in fade-in zoom-in-95 duration-100">
+                                <div className="text-[9px] uppercase font-bold text-slate-400 mb-2 px-1 tracking-widest border-b border-slate-100 pb-1">Visibility Matrix</div>
+                                <div className="space-y-0.5">
+                                    {Object.keys(visibleProps).map(key => (
+                                        <label key={key} className="flex items-center justify-between px-2 py-1.5 hover:bg-slate-50 rounded-sm cursor-pointer transition-colors">
+                                            <span className="text-[11px] font-semibold text-slate-600 capitalize">{key}</span>
+                                            <input type="checkbox" checked={visibleProps[key]} onChange={() => setVisibleProps(prev => ({ ...prev, [key]: !prev[key] }))} className="w-3.5 h-3.5 text-blue-600 rounded-sm border-slate-300 focus:ring-0" />
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>
-                    <Button icon={Icons.Plus} onClick={() => setModal({ open: true, type })}>New</Button>
+                    <Button icon={Icons.Plus} onClick={() => setModal({ open: true, type })} variant="primary" className="shadow-sm uppercase text-[11px] tracking-widest px-5">Add New</Button>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-hidden bg-white rounded-lg border border-slate-200 shadow-sm relative">
+            <div className="flex-1 overflow-hidden bg-white border border-slate-200 relative flex flex-col shadow-sm">
                 {viewMode === 'list' ? (
                     <div className="absolute inset-0 overflow-auto scroller">
-                        <table className="data-table">
+                        <table className="w-full text-left border-collapse table-fixed">
                             <thead>
-                                <tr>
-                                    <th className="w-64">
-                                        <FilterHeader label="Name" sortKey="companyName" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.name} onFilter={v => setColFilters(p => ({ ...p, name: v }))} />
+                                <tr className="divide-x divide-slate-100 border-b border-slate-200">
+                                    <th className="w-72 bg-slate-50/50 p-0">
+                                        <FilterHeader label="Company Entity" sortKey="companyName" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.name} onFilter={v => setColFilters(p => ({ ...p, name: v }))} />
                                     </th>
                                     {visibleProps.status && (
-                                        <th className="w-32">
+                                        <th className="w-32 bg-slate-50/50 p-0">
                                             <FilterHeader label="Status" sortKey="status" currentSort={sort} onSort={handleSort} filterType="multi-select" filterValue={colFilters.status} onFilter={v => setColFilters(p => ({ ...p, status: v }))} options={statusOptions} />
                                         </th>
                                     )}
                                     {visibleProps.products && (
-                                        <th className="w-48">
-                                            <FilterHeader label="Products" sortKey="rollupProducts" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.products} onFilter={v => setColFilters(p => ({ ...p, products: v }))} />
+                                        <th className="w-56 bg-slate-50/50 p-0">
+                                            <FilterHeader label="Portfolio" sortKey="rollupProducts" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.products} onFilter={v => setColFilters(p => ({ ...p, products: v }))} />
                                         </th>
                                     )}
                                     {visibleProps.rollup && (
-                                        <th className="w-64">
-                                            <FilterHeader label="Next Action" sortKey="rollupPendingTasks" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.nextAction} onFilter={v => setColFilters(p => ({ ...p, nextAction: v }))} />
+                                        <th className="w-64 bg-slate-50/50 p-0">
+                                            <FilterHeader label="Engagement" sortKey="rollupPendingTasks" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.nextAction} onFilter={v => setColFilters(p => ({ ...p, nextAction: v }))} />
                                         </th>
                                     )}
                                     {visibleProps.leadDate && (
-                                        <th className="w-32">
-                                            <FilterHeader label={isVendor ? 'Created' : 'Lead Date'} sortKey={isVendor ? 'createdAt' : 'leadDate'} currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.date} onFilter={v => setColFilters(p => ({ ...p, date: v }))} />
+                                        <th className="w-32 bg-slate-50/50 p-0">
+                                            <FilterHeader label={isVendor ? 'Onboarded' : 'Lead Date'} sortKey={isVendor ? 'createdAt' : 'leadDate'} currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.date} onFilter={v => setColFilters(p => ({ ...p, date: v }))} />
                                         </th>
                                     )}
-                                    {visibleProps.source && (
-                                        <th className="w-32">
-                                            <FilterHeader label="Source" sortKey="leadSource" currentSort={sort} onSort={handleSort} filterType="multi-select" filterValue={colFilters.source} onFilter={v => setColFilters(p => ({ ...p, source: v }))} options={settings?.leadSources || []} />
-                                        </th>
-                                    )}
-                                    {visibleProps.hot && (
-                                        <th className="w-24">
-                                            <FilterHeader label="Hot?" sortKey="status" currentSort={sort} onSort={handleSort} filterType="boolean" filterValue={colFilters.hot} onFilter={v => setColFilters(p => ({ ...p, hot: v }))} />
-                                        </th>
-                                    )}
-                                    {visibleProps.website && (
-                                        <th className="w-48">
-                                            <FilterHeader label="Website" sortKey="website" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.website} onFilter={v => setColFilters(p => ({ ...p, website: v }))} />
-                                        </th>
-                                    )}
-                                    <th className="w-10"></th>
+                                    <th className="w-12 bg-slate-50/50"></th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-slate-100">
                                 {filteredData.map(item => (
-                                    <tr key={item.id} onClick={() => setDetailView({ open: true, type, data: item })} className="group cursor-pointer hover:bg-slate-50">
-                                        <td className="font-bold text-slate-800 px-4 py-3 border-b border-slate-100">
+                                    <tr
+                                        key={item.id}
+                                        onClick={() => setDetailView({ open: true, type, data: item })}
+                                        className="hover:bg-slate-50/80 cursor-pointer group transition-colors divide-x divide-slate-50"
+                                    >
+                                        <td className="px-4 py-2.5">
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shadow-sm ${isVendor ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>{item.companyName.charAt(0)}</div>
-                                                {item.companyName}
+                                                <div className={`w-8 h-8 rounded border flex items-center justify-center text-[10px] font-bold uppercase ${isVendor ? 'bg-purple-50 border-purple-100 text-purple-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+                                                    {item.companyName.charAt(0)}
+                                                </div>
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="font-bold text-slate-700 text-[13px] truncate">{item.companyName}</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter truncate">{item.website?.replace(/^https?:\/\//, '') || 'INTERNAL RECORD'}</span>
+                                                </div>
                                             </div>
                                         </td>
                                         {visibleProps.status && (
-                                            <td className="px-4 py-3 border-b border-slate-100">
+                                            <td className="px-4 py-2.5">
                                                 {isVendor ? <StatusBadge item={item} /> : <StatusSelect item={item} />}
                                             </td>
                                         )}
                                         {visibleProps.products && (
-                                            <td className="px-4 py-3 border-b border-slate-100">
+                                            <td className="px-4 py-2.5">
                                                 <div className="flex flex-wrap gap-1">
-                                                    {item.rollupProducts.length > 0 ?
-                                                        item.rollupProducts.slice(0, 2).map((p, i) => <span key={i} className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] border border-slate-200">{p}</span>)
-                                                        : <span className="text-slate-300 text-xs italic">-</span>
-                                                    }
-                                                    {item.rollupProducts.length > 2 && <span className="text-[10px] text-slate-400">+{item.rollupProducts.length - 2}</span>}
+                                                    {item.rollupProducts.slice(0, 2).map((p, i) => (
+                                                        <span key={i} className="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-500 rounded border border-slate-200 font-bold uppercase tracking-tighter">
+                                                            {p}
+                                                        </span>
+                                                    ))}
+                                                    {item.rollupProducts.length > 2 && (
+                                                        <span className="text-[9px] font-bold text-slate-300 uppercase px-1">+{item.rollupProducts.length - 2}</span>
+                                                    )}
+                                                    {item.rollupProducts.length === 0 && <span className="text-slate-200 text-[10px]">—</span>}
                                                 </div>
                                             </td>
                                         )}
                                         {visibleProps.rollup && (
-                                            <td className="px-4 py-3 border-b border-slate-100">
-                                                <div className="flex flex-col gap-1">
-                                                    {item.rollupPendingTasks.length > 0 ? (
-                                                        item.rollupPendingTasks.slice(0, 2).map(t => (
-                                                            <div key={t.id} className="flex items-start gap-2">
-                                                                <div className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${t.priority === 'High' ? 'bg-red-500' : 'bg-blue-400'}`}></div>
-                                                                <div className="text-xs">
-                                                                    <div className="font-medium text-slate-700 hover:text-blue-600 hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); setModal({ open: true, type: 'task', data: t, isEdit: true }) }}>{t.title}</div>
-                                                                    <div className="text-slate-400 text-[10px]">{formatDate(t.dueDate)}</div>
-                                                                </div>
-                                                            </div>
-                                                        ))
-                                                    ) : <span className="text-slate-300 text-xs">-</span>}
-                                                    {item.rollupPendingTasks.length > 2 && (
-                                                        <div className="text-[10px] text-slate-400 pl-3.5">+{item.rollupPendingTasks.length - 2} more</div>
-                                                    )}
-                                                </div>
+                                            <td className="px-4 py-2.5">
+                                                {item.rollupPendingTasks.length > 0 ? (
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className={`w-1.5 h-1.5 shrink-0 rounded-full ${item.rollupPendingTasks[0].priority === 'High' ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.4)]' : 'bg-blue-400'}`}></div>
+                                                            <span className="text-[11px] font-bold text-slate-600 truncate">{item.rollupPendingTasks[0].title}</span>
+                                                        </div>
+                                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-3">
+                                                            Due {formatDate(item.rollupPendingTasks[0].dueDate)}
+                                                        </div>
+                                                    </div>
+                                                ) : <span className="text-slate-200 text-[10px]">—</span>}
                                             </td>
                                         )}
-                                        {visibleProps.leadDate && <td className="text-slate-500 text-xs px-4 py-3 border-b border-slate-100">{item.leadDate ? formatDate(item.leadDate) : (item.createdAt ? formatDate(item.createdAt) : '-')}</td>}
-                                        {visibleProps.source && <td className="px-4 py-3 border-b border-slate-100"><span className="px-2 py-0.5 bg-orange-50 text-orange-700 rounded text-xs border border-orange-100">{item.leadSource || 'Unknown'}</span></td>}
-                                        {visibleProps.hot && <td className="px-4 py-3 border-b border-slate-100">{item.status === 'Hot Lead' && <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded border border-red-200">HOT</span>}</td>}
-                                        {visibleProps.website && (
-                                            <td className="text-blue-500 text-xs truncate max-w-[150px] px-4 py-3 border-b border-slate-100">
-                                                {item.website ? <a href={item.website} target="_blank" onClick={e => e.stopPropagation()} className="hover:underline flex items-center gap-1"><Icons.Link className="w-3 h-3" /> {item.website}</a> : '-'}
+                                        {visibleProps.leadDate && (
+                                            <td className="px-4 py-2.5">
+                                                <span className="text-[11px] font-bold text-slate-500">
+                                                    {item.leadDate ? formatDate(item.leadDate) : (item.createdAt ? formatDate(item.createdAt) : '-')}
+                                                </span>
                                             </td>
                                         )}
-                                        <td className="text-right px-4 py-3 border-b border-slate-100">
-                                            <button onClick={(e) => { e.stopPropagation(); setDetailView({ open: true, type, data: item }) }} className="text-slate-400 hover:text-blue-600 p-1 opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110">Open</button>
+                                        <td className="px-2 py-2.5 text-right">
+                                            <button className="p-1 text-slate-300 hover:text-blue-500 transition-colors">
+                                                <Icons.ChevronRight className="w-4 h-4" />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
+                                {filteredData.length === 0 && (
+                                    <tr>
+                                        <td colSpan="6" className="py-20 text-center">
+                                            <div className="flex flex-col items-center justify-center text-slate-300">
+                                                <Icons.Search className="w-12 h-12 mb-2 opacity-20" />
+                                                <p className="text-xs font-bold uppercase tracking-[0.2em]">No Matches Found</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
                 ) : (
-                    <div className="absolute inset-0 overflow-x-auto overflow-y-hidden p-4 flex gap-4 bg-slate-50">
+                    <div className="absolute inset-0 overflow-x-auto overflow-y-hidden p-4 flex gap-4 bg-slate-50/50">
                         {statusOptions.map(status => {
                             const itemsInStatus = filteredData.filter(i => (i.status || 'Active') === status);
                             return (
-                                <div key={status} className="w-72 flex-shrink-0 flex flex-col h-full">
-                                    <div className="flex justify-between items-center mb-3 px-1">
+                                <div key={status} className="w-72 flex-shrink-0 flex flex-col h-full bg-slate-100/30 rounded-lg border border-slate-200 p-2">
+                                    <div className="flex justify-between items-center mb-3 px-2">
                                         <div className="flex items-center gap-2">
-                                            <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${status === 'Active' || status === 'Hot Lead' ? 'bg-green-200 text-green-800' :
-                                                    status === 'On Hold' || status === 'Cold' ? 'bg-slate-200 text-slate-700' :
-                                                        status === 'Blacklisted' ? 'bg-red-200 text-red-800' :
-                                                            'bg-blue-200 text-blue-800'
-                                                }`}>{status}</span>
-                                            <span className="text-xs text-slate-400 font-medium">{itemsInStatus.length}</span>
+                                            <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-500">{status}</span>
+                                            <span className="bg-white border border-slate-200 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">{itemsInStatus.length}</span>
                                         </div>
-                                        <button className="text-slate-400 hover:text-slate-600"><Icons.Plus className="w-4 h-4" /></button>
                                     </div>
-                                    <div className="flex-1 overflow-y-auto scroller pr-1 space-y-2">
+                                    <div className="flex-1 overflow-y-auto scroller space-y-2.5 pr-1">
                                         {itemsInStatus.map(item => (
-                                            <div key={item.id} onClick={() => setDetailView({ open: true, type, data: item })} className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+                                            <div
+                                                key={item.id}
+                                                onClick={() => setDetailView({ open: true, type, data: item })}
+                                                className="bg-white p-3 border border-slate-200 shadow-sm hover:border-blue-400 cursor-pointer group transition-all hover:shadow-md"
+                                            >
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <h4 className="font-bold text-slate-800 text-sm">{item.companyName}</h4>
-                                                    <button onClick={(e) => { e.stopPropagation(); setModal({ open: true, type, data: item, isEdit: true }) }} className="text-slate-300 hover:text-blue-500 opacity-0 group-hover:opacity-100"><Icons.Edit className="w-3 h-3" /></button>
+                                                    <h4 className="font-bold text-slate-700 text-[13px] line-clamp-2 leading-snug tracking-tight">{item.companyName}</h4>
+                                                    <button onClick={(e) => { e.stopPropagation(); setModal({ open: true, type, data: item, isEdit: true }) }} className="p-1 text-slate-300 hover:text-blue-500 transition-colors"><Icons.Edit className="w-3 h-3" /></button>
                                                 </div>
+
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <div className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold border uppercase ${isVendor ? 'bg-purple-50 border-purple-100 text-purple-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+                                                        {item.companyName.charAt(0)}
+                                                    </div>
+                                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">{item.city || 'Location N/A'}</div>
+                                                </div>
+
                                                 {visibleProps.products && item.rollupProducts.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1 mb-2">
-                                                        {item.rollupProducts.slice(0, 3).map((p, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 bg-yellow-50 text-yellow-700 border border-yellow-100 rounded">{p}</span>)}
+                                                    <div className="flex flex-wrap gap-1 mb-3">
+                                                        {item.rollupProducts.slice(0, 2).map((p, i) => <span key={i} className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-slate-50 text-slate-500 border border-slate-100 rounded-sm">{p}</span>)}
+                                                        {item.rollupProducts.length > 2 && <span className="text-[9px] font-bold text-slate-300 px-1">+{item.rollupProducts.length - 2}</span>}
                                                     </div>
                                                 )}
+
                                                 {visibleProps.rollup && item.rollupPendingTasks.length > 0 && (
-                                                    <div className="mt-3 pt-2 border-t border-slate-50 space-y-1">
-                                                        {item.rollupPendingTasks.slice(0, 2).map(t => (
-                                                            <div key={t.id} className="flex items-start gap-2">
-                                                                <div className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${t.priority === 'High' ? 'bg-red-500' : 'bg-blue-400'}`}></div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="text-xs text-slate-600 truncate">{t.title}</div>
-                                                                    <div className="text-[10px] text-slate-400">{formatDate(t.dueDate)}</div>
-                                                                </div>
+                                                    <div className="mt-2 pt-2 border-t border-slate-50">
+                                                        <div className="flex items-start gap-1.5">
+                                                            <div className={`w-1.5 h-1.5 mt-1 shrink-0 rounded-full ${item.rollupPendingTasks[0].priority === 'High' ? 'bg-red-500' : 'bg-blue-400'}`}></div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="text-[10px] font-bold text-slate-600 truncate leading-tight">{item.rollupPendingTasks[0].title}</div>
+                                                                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">Due {formatDate(item.rollupPendingTasks[0].dueDate)}</div>
                                                             </div>
-                                                        ))}
-                                                        {item.rollupPendingTasks.length > 2 && <div className="text-[10px] text-slate-400 pl-3.5">+{item.rollupPendingTasks.length - 2} more</div>}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
