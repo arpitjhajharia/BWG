@@ -129,7 +129,7 @@ export const AdminPanel = ({ currentUser, data, actions, setModal }) => {
                                                 >
                                                     <Icons.Edit className="w-4 h-4" />
                                                 </button>
-                                                {u.username !== 'admin' && (
+                                                {(u.username !== 'admin' || userProfiles.filter(p => p.username === 'admin').length > 1) && (
                                                     <button
                                                         onClick={() => { if (confirm('Permanently delete user?')) actions.del('users', u.id) }}
                                                         className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"

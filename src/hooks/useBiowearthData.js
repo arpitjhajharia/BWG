@@ -49,7 +49,7 @@ export const useBiowearthData = () => {
                     onSnapshot(collection(db, path, 'users'), s => {
                         const users = s.docs.map(d => ({ id: d.id, ...d.data() }));
                         setData(p => ({ ...p, userProfiles: users }));
-                        if (users.length === 0) {
+                        if (!users.some(u => u.username === 'admin')) {
                             addDoc(collection(db, path, 'users'), { name: 'System Admin', username: 'admin', password: 'password123', role: 'Admin', createdAt: serverTimestamp() });
                         }
                     }),

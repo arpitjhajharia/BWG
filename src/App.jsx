@@ -45,9 +45,7 @@ function App() {
     { id: 'tasks', label: 'Tasks', icon: Icons.Task },
   ];
 
-  if (currentUser.role === 'Admin') {
-    navItems.push({ id: 'admin', label: 'Admin', icon: Icons.Admin });
-  }
+  // Admin item removed from sidebar - now accessed via settings icon
 
   const handleNavClick = (id) => {
     setActiveTab(id);
@@ -147,9 +145,15 @@ function App() {
               <Icons.Info className="w-4 h-4" />
             </button>
             <div className="w-px h-4 bg-slate-200 mx-1"></div>
-            <button className="p-2 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-50 transition-all" title="Settings">
-              <Icons.Settings className="w-4 h-4" />
-            </button>
+            {currentUser.role === 'Admin' && (
+              <button
+                onClick={() => setActiveTab('admin')}
+                className={`p-2 rounded transition-all ${activeTab === 'admin' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'text-slate-400 hover:text-blue-600 hover:bg-slate-50'}`}
+                title="Settings"
+              >
+                <Icons.Settings className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </header>
 
