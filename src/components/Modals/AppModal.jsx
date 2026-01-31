@@ -9,6 +9,17 @@ import { REQUIRED_DOCS, ORS_REQUIRED_DOCS, COUNTRIES } from '../../utils/constan
 export const AppModal = ({ modal, setModal, data, actions }) => {
 
     const { products, skus, vendors, clients, userProfiles, quotesReceived, settings, formulations = [] } = data;
+
+    // --- SKU FILTERING (Ghost data, orphanded & duplicates) ---
+    const cleanSkus = useMemo(() => {
+        return skus.filter(s => {
+            return products.some(p => p.id === s.productId);
+        });
+    }, [skus, products]);
+
+    const unlinkedSkus = useMemo(() => {
+        return cleanSkus.filter(s => !formulations.some(f => f.skuId === s.id) || (modal.isEdit && s.id === modal.data?.skuId));
+    }, [cleanSkus, formulations, modal.isEdit, modal.data?.skuId]);
     const [form, setForm] = useState(modal.data || {});
 
     // Sync form state when modal opens
@@ -48,7 +59,6 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                     ...prev,
                     date: new Date().toISOString().split('T')[0],
                     currency: 'INR',
-                    costTerms: 'GST Extra',
                     requiredDocs: ORS_REQUIRED_DOCS.reduce((acc, doc) => ({ ...acc, [doc]: true }), {})
                 }));
             }
@@ -117,11 +127,11 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
     // Filter SKUs for Vendor Orders
     const isVendorOrder = vendors.some(v => v.id === form.companyId);
     const availableSkus = useMemo(() => {
-        if (modal.type === 'order' && isVendorOrder) {
-            return skus.filter(s => quotesReceived.some(q => q.vendorId === form.companyId && q.skuId === s.id));
-        }
-        return skus;
-    }, [skus, quotesReceived, isVendorOrder, form.companyId, modal.type]);
+        const filtered = modal.type === 'order' && isVendorOrder
+            ? cleanSkus.filter(s => quotesReceived.some(q => q.vendorId === form.companyId && q.skuId === s.id))
+            : cleanSkus;
+        return filtered;
+    }, [cleanSkus, quotesReceived, isVendorOrder, form.companyId, modal.type]);
 
     // --- HANDLERS ---
 
@@ -551,7 +561,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU</label>
                             <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
                                 <option>Select SKU...</option>
-                                {skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
                     </div>
@@ -628,7 +638,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU</label>
                             <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
                                 <option value="">Select SKU...</option>
-                                {availableSkus.map(s => <option key={s.id} value={s.id}>{s.name} ({s.variant})</option>)}
+                                {availableSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
@@ -707,10 +717,9 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Linked SKU</label>
                             <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
                                 <option value="">Select SKU...</option>
-                                {skus.map(s => {
-                                    const p = products.find(x => x.id === s.productId);
-                                    return <option key={s.id} value={s.id}>{p?.name} ({s.variant})</option>
-                                })}
+                                {unlinkedSkus.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
                             </select>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -853,10 +862,9 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU Selection</label>
                         <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-bold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
                             <option value="">Select SKU...</option>
-                            {skus.map(s => {
-                                const p = products.find(x => x.id === s.productId);
-                                return <option key={s.id} value={s.id}>{p?.name} ({s.variant})</option>
-                            })}
+                            {cleanSkus.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
                         </select>
                     </div>
 
@@ -880,38 +888,13 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                         )}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                         <div>
                             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Quantity</label>
                             <input type="number" className="w-full p-2 border border-slate-300 rounded text-[13px]" placeholder="0" value={form.qty || ''} onChange={e => setForm({ ...form, qty: e.target.value })} />
                         </div>
-                        <div className="col-span-2">
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Cost Per Unit</label>
-                            <div className="flex">
-                                <select className="p-2 border border-slate-300 border-r-0 rounded-l text-[13px] bg-slate-50 font-bold" value={form.currency || 'INR'} onChange={e => setForm({ ...form, currency: e.target.value })}>
-                                    <option>INR</option><option>USD</option>
-                                </select>
-                                <input type="number" step="0.01" className="w-full p-2 border border-slate-300 rounded-r text-[13px] font-bold" placeholder="0.00" value={form.costPerUnit || ''} onChange={e => setForm({ ...form, costPerUnit: e.target.value })} />
-                            </div>
-                        </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Cost Terms</label>
-                            <input className="w-full p-2 border border-slate-300 rounded text-[13px]" placeholder="e.g. GST Extra" value={form.costTerms || ''} onChange={e => setForm({ ...form, costTerms: e.target.value })} />
-                        </div>
-                        <div>
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Price Terms (Incoterms)</label>
-                            <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white" value={form.priceTerms || ''} onChange={e => setForm({ ...form, priceTerms: e.target.value })}>
-                                <option value="">Select...</option>
-                                <option>Ex-Works</option>
-                                <option>FOB</option>
-                                <option>CIF</option>
-                                <option>CFR</option>
-                            </select>
-                        </div>
-                    </div>
 
                     <div className="grid grid-cols-3 gap-3">
                         <div>
@@ -984,10 +967,9 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Select Marketplace SKU</label>
                                 <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-bold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
                                     <option value="">Select SKU...</option>
-                                    {skus.map(s => {
-                                        const p = products.find(x => x.id === s.productId);
-                                        return <option key={s.id} value={s.id}>{p?.name} ({s.variant})</option>
-                                    })}
+                                    {cleanSkus.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                    ))}
                                 </select>
                             </div>
 

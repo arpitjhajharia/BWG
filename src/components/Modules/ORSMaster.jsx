@@ -62,7 +62,6 @@ export const ORSMaster = ({ data, actions, setModal }) => {
                 ['Pack Details', sku ? `${sku.packSize} ${sku.unit} (${sku.packType})` : '-'],
                 ['Packing Materials', packingMaterials],
                 ['Quantity', `${item.qty || 0} units`],
-                ['Price Terms', item.priceTerms || '-'],
                 ['Country of Sale', item.countryOfSale || '-'],
                 ['Lead Time', `${item.leadTime || 0} weeks`],
                 ['Shelf Life', `${item.shelfLife || 0} months`],
@@ -92,17 +91,18 @@ export const ORSMaster = ({ data, actions, setModal }) => {
                 const ingBody = formulation.ingredients.map(ing => [
                     ing.name,
                     ing.type || 'Active',
-                    ing.per100g || '-',
+                    `${ing.per100g || '0'}%`,
                     ing.perServing || '-',
                     ing.perSku || '-'
                 ]);
 
+                const dosageUnit = formulation.dosageUnit || '';
                 autoTable(doc, {
                     startY: finalY + 15,
-                    head: [['Ingredient', 'Type', 'Qty / 100g', 'Qty / Serving', 'Qty / Unit']],
+                    head: [['Ingredient', 'Type', 'Qty %', `Qty/Serv (${dosageUnit})`, `Qty/Unit (${dosageUnit})`]],
                     body: ingBody,
                     theme: 'striped',
-                    headStyles: { fillColor: [100, 116, 139] },
+                    headStyles: { fillColor: [71, 85, 105] },
                     styles: { fontSize: 9, cellPadding: 1.5 },
                 });
 
@@ -188,8 +188,8 @@ export const ORSMaster = ({ data, actions, setModal }) => {
                             <th className="px-3 py-2 w-32">Date</th>
                             <th className="px-3 py-2 w-48">Vendor / Client</th>
                             <th className="px-3 py-2">SKU Details</th>
-                            <th className="px-3 py-2 w-32">Qty & Cost</th>
-                            <th className="px-3 py-2 w-32">Terms</th>
+                            <th className="px-3 py-2 w-32">Quantity</th>
+                            <th className="px-3 py-2 w-32">Country</th>
                             <th className="px-3 py-2 w-24 text-right">Actions</th>
                         </tr>
                     </thead>
@@ -213,12 +213,8 @@ export const ORSMaster = ({ data, actions, setModal }) => {
                                 </td>
                                 <td className="px-3 py-2 align-top">
                                     <div className="font-bold text-slate-800">{item.qty}</div>
-                                    <div className="text-[11px] text-slate-500 font-mono">@ {item.currency}{item.costPerUnit}</div>
                                 </td>
                                 <td className="px-3 py-2 align-top">
-                                    <span className="inline-block px-1.5 py-0.5 rounded border border-blue-100 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-wider mb-1">
-                                        {item.priceTerms || '-'}
-                                    </span>
                                     <div className="text-[10px] text-slate-400">{item.countryOfSale}</div>
                                 </td>
                                 <td className="px-3 py-2 text-right align-top">
