@@ -12,7 +12,9 @@ import { QuotesTab } from './components/Modules/QuotesTab';
 import { TaskBoard } from './components/Modules/TaskBoard';
 import { AdminPanel } from './components/Modules/AdminPanel';
 import { ORSMaster } from './components/Modules/ORSMaster';
-import { RFQMaster } from './components/Modules/RFQMaster'; // <--- Import RFQMaster
+import { RFQMaster } from './components/Modules/RFQMaster';
+import { Inventory } from './components/modules/Inventory';
+import { CurrentInventory } from './components/modules/CurrentInventory';
 
 // Modals
 import { AppModal } from './components/Modals/AppModal';
@@ -43,6 +45,8 @@ function App() {
     { id: 'clients', label: 'Clients', icon: Icons.Users },
     { id: 'quotes', label: 'Quotes', icon: Icons.Money },
     { id: 'tasks', label: 'Tasks', icon: Icons.Task },
+    { id: 'inventory', label: 'Inventory', icon: Icons.Box },
+    { id: 'stock', label: 'Stock', icon: Icons.Stock },
   ];
 
   // Admin item removed from sidebar - now accessed via settings icon
@@ -169,6 +173,8 @@ function App() {
             {activeTab === 'clients' && <CompanyMaster type="client" data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} />}
             {activeTab === 'quotes' && <QuotesTab data={data} actions={actions} setModal={setModal} />}
             {activeTab === 'tasks' && <TaskBoard data={data} actions={actions} setModal={setModal} />}
+            {activeTab === 'inventory' && <Inventory data={data} actions={actions} setModal={setModal} />}
+            {activeTab === 'stock' && <CurrentInventory data={data} />}
             {activeTab === 'admin' && <AdminPanel currentUser={currentUser} data={data} actions={actions} setModal={setModal} />}
           </div>
         </main>

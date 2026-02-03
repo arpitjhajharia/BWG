@@ -136,12 +136,18 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
     // --- HANDLERS ---
 
     const submit = async () => {
-        const map = {
+        let map = {
             product: 'products', sku: 'skus', vendor: 'vendors', client: 'clients',
             contact: 'contacts', quoteReceived: 'quotesReceived', quoteSent: 'quotesSent',
             task: 'tasks', user: 'users', order: 'orders', formulation: 'formulations',
-            ors: 'ors', rfq: 'rfqs'
+            ors: 'ors', rfq: 'rfqs', inventoryInward: 'inventoryInwards', inventoryOutward: 'inventoryOutwards'
         };
+
+        // Handle unified inventory record
+        if (modal.type === 'inventoryRecord') {
+            map.inventoryRecord = form.movementType === 'Inward' ? 'inventoryInwards' : 'inventoryOutwards';
+        }
+
         const col = map[modal.type];
 
         // Specific Validation for Vendor Input in RFQ (since it's a datalist)
@@ -166,6 +172,54 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
             const totalPercent = (form.paymentTerms || []).reduce((sum, t) => sum + (parseFloat(t.percent) || 0), 0);
             if (Math.abs(totalPercent - 100) > 0.1) {
                 alert(`Payment milestones must sum to 100%. Current sum: ${totalPercent}%`);
+                return;
+            }
+        }
+
+        // Inventory Outward Validation - Prevent back-orders
+        if (col === 'inventoryOutwards' && form.skuId && form.quantity) {
+            const { inventoryInwards, inventoryOutwards } = data;
+            const totalInward = inventoryInwards.filter(i => i.skuId === form.skuId).reduce((sum, i) => sum + (parseFloat(i.quantity) || 0), 0);
+            const totalOutward = inventoryOutwards.filter(o => o.skuId === form.skuId && o.id !== modal.data?.id).reduce((sum, o) => sum + (parseFloat(o.quantity) || 0), 0);
+            const currentStock = totalInward - totalOutward;
+            const requestedQty = parseFloat(form.quantity) || 0;
+
+            if (requestedQty > currentStock) {
+                const sku = cleanSkus.find(s => s.id === form.skuId);
+                alert(`Insufficient stock! Available: ${currentStock} ${sku?.unit || 'units'}, Requested: ${requestedQty} ${sku?.unit || 'units'}`);
+                return;
+            }
+        }
+
+        // Normalize inventoryRecord data before saving
+        if (modal.type === 'inventoryRecord') {
+            if (form.movementType === 'Inward') {
+                form.sourceType = form.partyType;
+                form.sourceId = form.partyId;
+                form.sourceName = form.partyName;
+            } else {
+                form.destinationType = form.partyType;
+                form.destinationId = form.partyId;
+                form.destinationName = form.partyName;
+            }
+            // Clean up temporary form fields
+            delete form.partyType;
+            delete form.partyId;
+            delete form.partyName;
+            delete form.movementType;
+        }
+
+        // Also check stock for outward via unified record
+        if (modal.type === 'inventoryRecord' && col === 'inventoryOutwards' && form.skuId && form.quantity) {
+            const { inventoryInwards, inventoryOutwards } = data;
+            const totalInward = inventoryInwards.filter(i => i.skuId === form.skuId).reduce((sum, i) => sum + (parseFloat(i.quantity) || 0), 0);
+            const totalOutward = inventoryOutwards.filter(o => o.skuId === form.skuId && o.id !== modal.data?.id).reduce((sum, o) => sum + (parseFloat(o.quantity) || 0), 0);
+            const currentStock = totalInward - totalOutward;
+            const requestedQty = parseFloat(form.quantity) || 0;
+
+            if (requestedQty > currentStock) {
+                const sku = cleanSkus.find(s => s.id === form.skuId);
+                alert(`Insufficient stock! Available: ${currentStock} ${sku?.unit || 'units'}, Requested: ${requestedQty} ${sku?.unit || 'units'}`);
                 return;
             }
         }
@@ -1124,6 +1178,482 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             className="w-full p-2 border border-slate-300 rounded text-[13px] text-blue-600"
                             value={form.linkedin || ''}
                             onChange={e => setForm({ ...form, linkedin: e.target.value })}
+                        />
+                    </div>
+                </div>
+            );
+            case 'inventoryInward': return (
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <h3 className="font-bold text-lg text-slate-800">{modal.isEdit ? 'Edit' : 'New'} Inventory Inward</h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Date <span className="text-red-500">*</span></label>
+                            <input
+                                type="date"
+                                className="w-full p-2 border border-slate-300 rounded text-[13px]"
+                                max={new Date().toISOString().split('T')[0]}
+                                value={form.date || new Date().toISOString().split('T')[0]}
+                                onChange={e => setForm({ ...form, date: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Source Type <span className="text-red-500">*</span></label>
+                            <select
+                                className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold"
+                                value={form.sourceType || ''}
+                                onChange={e => setForm({ ...form, sourceType: e.target.value, sourceId: null, sourceName: '' })}
+                            >
+                                <option value="">Select Source Type...</option>
+                                <option value="Vendor">Vendor</option>
+                                <option value="Client">Client</option>
+                                <option value="ThirdParty">Third Party</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Dynamic Source Selection */}
+                    {form.sourceType === 'Vendor' && (
+                        <div>
+                            <label className="block text-[11px] font-bold text-purple-600 uppercase tracking-wide mb-1">Select Vendor <span className="text-red-500">*</span></label>
+                            <select
+                                className="w-full p-2 border border-purple-200 rounded text-[13px] bg-purple-50/30 font-semibold"
+                                value={form.sourceId || ''}
+                                onChange={e => {
+                                    const v = vendors.find(x => x.id === e.target.value);
+                                    setForm({ ...form, sourceId: v?.id, sourceName: v?.companyName || '' });
+                                }}
+                            >
+                                <option value="">Select Vendor...</option>
+                                {vendors.map(v => <option key={v.id} value={v.id}>{v.companyName}</option>)}
+                            </select>
+                        </div>
+                    )}
+                    {form.sourceType === 'Client' && (
+                        <div>
+                            <label className="block text-[11px] font-bold text-emerald-600 uppercase tracking-wide mb-1">Select Client <span className="text-red-500">*</span></label>
+                            <select
+                                className="w-full p-2 border border-emerald-200 rounded text-[13px] bg-emerald-50/30 font-semibold"
+                                value={form.sourceId || ''}
+                                onChange={e => {
+                                    const c = clients.find(x => x.id === e.target.value);
+                                    setForm({ ...form, sourceId: c?.id, sourceName: c?.companyName || '' });
+                                }}
+                            >
+                                <option value="">Select Client...</option>
+                                {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
+                            </select>
+                        </div>
+                    )}
+                    {form.sourceType === 'ThirdParty' && (
+                        <div>
+                            <label className="block text-[11px] font-bold text-amber-600 uppercase tracking-wide mb-1">Third Party Name <span className="text-red-500">*</span></label>
+                            <input
+                                placeholder="Enter supplier/party name..."
+                                className="w-full p-2 border border-amber-200 rounded text-[13px] bg-amber-50/30 font-semibold"
+                                value={form.sourceName || ''}
+                                onChange={e => setForm({ ...form, sourceName: e.target.value, sourceId: null })}
+                            />
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU <span className="text-red-500">*</span></label>
+                        <select
+                            className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold"
+                            value={form.skuId || ''}
+                            onChange={e => {
+                                const s = cleanSkus.find(x => x.id === e.target.value);
+                                setForm({ ...form, skuId: e.target.value, unit: s?.unit || 'units' });
+                            }}
+                        >
+                            <option value="">Select SKU...</option>
+                            {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Quantity <span className="text-red-500">*</span></label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    placeholder="0"
+                                    className="flex-1 p-2 border border-slate-300 rounded text-[13px] font-bold"
+                                    value={form.quantity || ''}
+                                    onChange={e => setForm({ ...form, quantity: e.target.value })}
+                                />
+                                <span className="flex items-center px-3 bg-slate-50 border border-slate-200 rounded text-[11px] font-bold text-slate-500 uppercase">
+                                    {form.unit || 'units'}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Reference / Invoice No</label>
+                            <input
+                                placeholder="INV-001"
+                                className="w-full p-2 border border-slate-300 rounded text-[13px] font-mono"
+                                value={form.reference || ''}
+                                onChange={e => setForm({ ...form, reference: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Notes</label>
+                        <textarea
+                            rows="2"
+                            placeholder="Additional details about this inward..."
+                            className="w-full p-2 border border-slate-300 rounded text-[13px]"
+                            value={form.notes || ''}
+                            onChange={e => setForm({ ...form, notes: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Document Link</label>
+                        <input
+                            placeholder="https://drive.google.com/..."
+                            className="w-full p-2 border border-slate-300 rounded text-[13px] text-blue-600"
+                            value={form.driveLink || ''}
+                            onChange={e => setForm({ ...form, driveLink: e.target.value })}
+                        />
+                    </div>
+                </div>
+            );
+            case 'inventoryOutward': return (
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <h3 className="font-bold text-lg text-slate-800">{modal.isEdit ? 'Edit' : 'New'} Inventory Outward</h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Date <span className="text-red-500">*</span></label>
+                            <input
+                                type="date"
+                                className="w-full p-2 border border-slate-300 rounded text-[13px]"
+                                max={new Date().toISOString().split('T')[0]}
+                                value={form.date || new Date().toISOString().split('T')[0]}
+                                onChange={e => setForm({ ...form, date: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Destination Type <span className="text-red-500">*</span></label>
+                            <select
+                                className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold"
+                                value={form.destinationType || ''}
+                                onChange={e => setForm({ ...form, destinationType: e.target.value, destinationId: null, destinationName: '' })}
+                            >
+                                <option value="">Select Destination Type...</option>
+                                <option value="Vendor">Vendor</option>
+                                <option value="Client">Client</option>
+                                <option value="ThirdParty">Third Party</option>
+                                <option value="Internal">Internal Use</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Dynamic Destination Selection */}
+                    {form.destinationType === 'Vendor' && (
+                        <div>
+                            <label className="block text-[11px] font-bold text-purple-600 uppercase tracking-wide mb-1">Select Vendor <span className="text-red-500">*</span></label>
+                            <select
+                                className="w-full p-2 border border-purple-200 rounded text-[13px] bg-purple-50/30 font-semibold"
+                                value={form.destinationId || ''}
+                                onChange={e => {
+                                    const v = vendors.find(x => x.id === e.target.value);
+                                    setForm({ ...form, destinationId: v?.id, destinationName: v?.companyName || '' });
+                                }}
+                            >
+                                <option value="">Select Vendor...</option>
+                                {vendors.map(v => <option key={v.id} value={v.id}>{v.companyName}</option>)}
+                            </select>
+                        </div>
+                    )}
+                    {form.destinationType === 'Client' && (
+                        <div>
+                            <label className="block text-[11px] font-bold text-emerald-600 uppercase tracking-wide mb-1">Select Client <span className="text-red-500">*</span></label>
+                            <select
+                                className="w-full p-2 border border-emerald-200 rounded text-[13px] bg-emerald-50/30 font-semibold"
+                                value={form.destinationId || ''}
+                                onChange={e => {
+                                    const c = clients.find(x => x.id === e.target.value);
+                                    setForm({ ...form, destinationId: c?.id, destinationName: c?.companyName || '' });
+                                }}
+                            >
+                                <option value="">Select Client...</option>
+                                {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
+                            </select>
+                        </div>
+                    )}
+                    {form.destinationType === 'ThirdParty' && (
+                        <div>
+                            <label className="block text-[11px] font-bold text-amber-600 uppercase tracking-wide mb-1">Third Party Name <span className="text-red-500">*</span></label>
+                            <input
+                                placeholder="Enter recipient name..."
+                                className="w-full p-2 border border-amber-200 rounded text-[13px] bg-amber-50/30 font-semibold"
+                                value={form.destinationName || ''}
+                                onChange={e => setForm({ ...form, destinationName: e.target.value, destinationId: null })}
+                            />
+                        </div>
+                    )}
+                    {form.destinationType === 'Internal' && (
+                        <div>
+                            <label className="block text-[11px] font-bold text-blue-600 uppercase tracking-wide mb-1">Internal Purpose</label>
+                            <input
+                                placeholder="e.g., Production, Testing, Sampling..."
+                                className="w-full p-2 border border-blue-200 rounded text-[13px] bg-blue-50/30 font-semibold"
+                                value={form.destinationName || ''}
+                                onChange={e => setForm({ ...form, destinationName: e.target.value, destinationId: null })}
+                            />
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU <span className="text-red-500">*</span></label>
+                        <select
+                            className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold"
+                            value={form.skuId || ''}
+                            onChange={e => {
+                                const s = cleanSkus.find(x => x.id === e.target.value);
+                                setForm({ ...form, skuId: e.target.value, unit: s?.unit || 'units' });
+                            }}
+                        >
+                            <option value="">Select SKU...</option>
+                            {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Quantity <span className="text-red-500">*</span></label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    placeholder="0"
+                                    className="flex-1 p-2 border border-slate-300 rounded text-[13px] font-bold"
+                                    value={form.quantity || ''}
+                                    onChange={e => setForm({ ...form, quantity: e.target.value })}
+                                />
+                                <span className="flex items-center px-3 bg-slate-50 border border-slate-200 rounded text-[11px] font-bold text-slate-500 uppercase">
+                                    {form.unit || 'units'}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Reference / Dispatch No</label>
+                            <input
+                                placeholder="DISP-001"
+                                className="w-full p-2 border border-slate-300 rounded text-[13px] font-mono"
+                                value={form.reference || ''}
+                                onChange={e => setForm({ ...form, reference: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Notes</label>
+                        <textarea
+                            rows="2"
+                            placeholder="Additional details about this dispatch..."
+                            className="w-full p-2 border border-slate-300 rounded text-[13px]"
+                            value={form.notes || ''}
+                            onChange={e => setForm({ ...form, notes: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Document Link</label>
+                        <input
+                            placeholder="https://drive.google.com/..."
+                            className="w-full p-2 border border-slate-300 rounded text-[13px] text-blue-600"
+                            value={form.driveLink || ''}
+                            onChange={e => setForm({ ...form, driveLink: e.target.value })}
+                        />
+                    </div>
+                </div>
+            );
+            case 'inventoryRecord': return (
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <h3 className="font-bold text-lg text-slate-800">{modal.isEdit ? 'Edit' : 'New'} Inventory Record</h3>
+                    </div>
+
+                    {/* Inward/Outward Toggle */}
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2">Movement Type <span className="text-red-500">*</span></label>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                className={`flex-1 py-2.5 rounded border-2 font-bold text-[12px] uppercase tracking-wide transition-all ${form.movementType === 'Inward'
+                                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
+                                    : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                    }`}
+                                onClick={() => setForm({ ...form, movementType: 'Inward', partyType: '', partyId: null, partyName: '' })}
+                            >
+                                ↓ Inward
+                            </button>
+                            <button
+                                type="button"
+                                className={`flex-1 py-2.5 rounded border-2 font-bold text-[12px] uppercase tracking-wide transition-all ${form.movementType === 'Outward'
+                                    ? 'bg-red-50 border-red-500 text-red-700'
+                                    : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                    }`}
+                                onClick={() => setForm({ ...form, movementType: 'Outward', partyType: '', partyId: null, partyName: '' })}
+                            >
+                                ↑ Outward
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Date <span className="text-red-500">*</span></label>
+                            <input
+                                type="date"
+                                className="w-full p-2 border border-slate-300 rounded text-[13px]"
+                                max={new Date().toISOString().split('T')[0]}
+                                value={form.date || new Date().toISOString().split('T')[0]}
+                                onChange={e => setForm({ ...form, date: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">
+                                {form.movementType === 'Inward' ? 'Source' : 'Destination'} Type <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold"
+                                value={form.partyType || ''}
+                                onChange={e => setForm({ ...form, partyType: e.target.value, partyId: null, partyName: '' })}
+                            >
+                                <option value="">Select Type...</option>
+                                <option value="Vendor">Vendor</option>
+                                <option value="Client">Client</option>
+                                <option value="ThirdParty">Third Party</option>
+                                {form.movementType === 'Outward' && <option value="Internal">Internal Use</option>}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Dynamic Party Selection */}
+                    {form.partyType === 'Vendor' && (
+                        <div>
+                            <label className="block text-[11px] font-bold text-purple-600 uppercase tracking-wide mb-1">Select Vendor <span className="text-red-500">*</span></label>
+                            <select
+                                className="w-full p-2 border border-purple-200 rounded text-[13px] bg-purple-50/30 font-semibold"
+                                value={form.partyId || ''}
+                                onChange={e => {
+                                    const v = vendors.find(x => x.id === e.target.value);
+                                    setForm({ ...form, partyId: v?.id, partyName: v?.companyName || '' });
+                                }}
+                            >
+                                <option value="">Select Vendor...</option>
+                                {vendors.map(v => <option key={v.id} value={v.id}>{v.companyName}</option>)}
+                            </select>
+                        </div>
+                    )}
+                    {form.partyType === 'Client' && (
+                        <div>
+                            <label className="block text-[11px] font-bold text-emerald-600 uppercase tracking-wide mb-1">Select Client <span className="text-red-500">*</span></label>
+                            <select
+                                className="w-full p-2 border border-emerald-200 rounded text-[13px] bg-emerald-50/30 font-semibold"
+                                value={form.partyId || ''}
+                                onChange={e => {
+                                    const c = clients.find(x => x.id === e.target.value);
+                                    setForm({ ...form, partyId: c?.id, partyName: c?.companyName || '' });
+                                }}
+                            >
+                                <option value="">Select Client...</option>
+                                {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
+                            </select>
+                        </div>
+                    )}
+                    {form.partyType === 'ThirdParty' && (
+                        <div>
+                            <label className="block text-[11px] font-bold text-amber-600 uppercase tracking-wide mb-1">
+                                {form.movementType === 'Inward' ? 'Source' : 'Recipient'} Name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                placeholder="Enter name..."
+                                className="w-full p-2 border border-amber-200 rounded text-[13px] bg-amber-50/30 font-semibold"
+                                value={form.partyName || ''}
+                                onChange={e => setForm({ ...form, partyName: e.target.value, partyId: null })}
+                            />
+                        </div>
+                    )}
+                    {form.partyType === 'Internal' && (
+                        <div>
+                            <label className="block text-[11px] font-bold text-blue-600 uppercase tracking-wide mb-1">Purpose</label>
+                            <input
+                                placeholder="e.g., Production, Testing, Sampling..."
+                                className="w-full p-2 border border-blue-200 rounded text-[13px] bg-blue-50/30 font-semibold"
+                                value={form.partyName || ''}
+                                onChange={e => setForm({ ...form, partyName: e.target.value, partyId: null })}
+                            />
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU <span className="text-red-500">*</span></label>
+                        <select
+                            className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold"
+                            value={form.skuId || ''}
+                            onChange={e => {
+                                const s = cleanSkus.find(x => x.id === e.target.value);
+                                setForm({ ...form, skuId: e.target.value, unit: s?.unit || 'units' });
+                            }}
+                        >
+                            <option value="">Select SKU...</option>
+                            {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Quantity <span className="text-red-500">*</span></label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    placeholder="0"
+                                    className="flex-1 p-2 border border-slate-300 rounded text-[13px] font-bold"
+                                    value={form.quantity || ''}
+                                    onChange={e => setForm({ ...form, quantity: e.target.value })}
+                                />
+                                <span className="flex items-center px-3 bg-slate-50 border border-slate-200 rounded text-[11px] font-bold text-slate-500 uppercase">
+                                    {form.unit || 'units'}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Reference No</label>
+                            <input
+                                placeholder="INV-001 / DISP-001"
+                                className="w-full p-2 border border-slate-300 rounded text-[13px] font-mono"
+                                value={form.reference || ''}
+                                onChange={e => setForm({ ...form, reference: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Notes</label>
+                        <textarea
+                            rows="2"
+                            placeholder="Additional details..."
+                            className="w-full p-2 border border-slate-300 rounded text-[13px]"
+                            value={form.notes || ''}
+                            onChange={e => setForm({ ...form, notes: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Document Link</label>
+                        <input
+                            placeholder="https://drive.google.com/..."
+                            className="w-full p-2 border border-slate-300 rounded text-[13px] text-blue-600"
+                            value={form.driveLink || ''}
+                            onChange={e => setForm({ ...form, driveLink: e.target.value })}
                         />
                     </div>
                 </div>
