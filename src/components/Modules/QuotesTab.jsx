@@ -3,6 +3,7 @@ import { Icons } from '../ui/Icons';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
+
 import { formatMoney } from '../../utils/helpers';
 
 export const QuotesTab = ({ data, actions, setModal }) => {
@@ -84,52 +85,48 @@ export const QuotesTab = ({ data, actions, setModal }) => {
             <div className="hidden md:block flex-1 overflow-auto bg-white rounded-xl border border-slate-200 shadow-sm scroller">
                 {view === 'purchase' ? (
                     <table className="w-full text-left border-separate border-spacing-0">
-                        <thead className="sticky top-0 bg-slate-50/80 backdrop-blur-md text-xs font-bold text-slate-500 border-b border-slate-200 z-10 shadow-sm uppercase tracking-wider">
+                        <thead className="sticky top-0 bg-slate-50/80 backdrop-blur-md text-[11px] font-bold text-slate-500 border-b border-slate-200 z-10 shadow-sm uppercase tracking-wider">
                             <tr>
-                                <th className="px-4 py-3 border-b border-slate-200">ID</th>
-                                <th className="px-4 py-3 border-b border-slate-200">Vendor</th>
-                                <th className="px-4 py-3 border-b border-slate-200 min-w-[200px]">SKU</th>
-                                <th className="px-4 py-3 border-b border-slate-200 text-right">MOQ</th>
-                                <th className="px-4 py-3 border-b border-slate-200 text-right">Price</th>
-                                <th className="px-4 py-3 border-b border-slate-200 text-right">Total</th>
-                                <th className="px-4 py-3 border-b border-slate-200">Sales Ref</th>
-                                <th className="px-4 py-3 border-b border-slate-200 text-center">Doc</th>
-                                <th className="px-4 py-3 border-b border-slate-200"></th>
+                                <th className="px-3 py-2 border-b border-slate-200">ID</th>
+                                <th className="px-3 py-2 border-b border-slate-200">Vendor</th>
+                                <th className="px-3 py-2 border-b border-slate-200">SKU</th>
+                                <th className="px-3 py-2 border-b border-slate-200 text-right">MOQ</th>
+                                <th className="px-3 py-2 border-b border-slate-200 text-right">Price</th>
+                                <th className="px-3 py-2 border-b border-slate-200 text-right">Total</th>
+                                <th className="px-3 py-2 border-b border-slate-200 text-center">Doc</th>
+                                <th className="px-3 py-2 border-b border-slate-200"></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 text-[13px]">
+                        <tbody className="divide-y divide-slate-100 text-[11px]">
                             {filteredQuotesReceived.map(q => {
                                 const v = vendors.find(x => x.id === q.vendorId);
                                 const s = skus.find(x => x.id === q.skuId);
                                 const linkedSQ = quotesSent.find(sq => sq.baseCostId === q.id);
                                 return (
                                     <tr key={q.id} className="group hover:bg-blue-50/30 transition-all duration-200">
-                                        <td className="px-4 py-3.5 font-mono text-slate-400 text-[11px] font-medium">{q.quoteId}</td>
-                                        <td className="px-4 py-3.5">
+                                        <td className="px-3 py-2 font-mono text-slate-400 text-[10px] font-medium">{q.quoteId}</td>
+                                        <td className="px-3 py-2">
                                             <div className="font-semibold text-slate-700">{v?.companyName || 'Unknown'}</div>
                                         </td>
-                                        <td className="px-4 py-3.5">
-                                            <div className="font-medium text-slate-600 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 inline-block">{s?.name || 'Unknown SKU'}</div>
+                                        <td className="px-3 py-2">
+                                            <div className="font-medium text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 inline-block">
+                                                {s?.name || 'Unknown SKU'}
+                                            </div>
                                         </td>
-                                        <td className="px-4 py-3.5 text-right font-mono text-slate-600">{q.moq}</td>
-                                        <td className="px-4 py-3.5 text-right font-semibold text-slate-700">{formatMoney(q.price, q.currency)}</td>
-                                        <td className="px-4 py-3.5 text-right font-bold text-blue-600">{formatMoney(q.price * q.moq, q.currency)}</td>
-                                        <td className="px-4 py-3.5">
-                                            {linkedSQ ? (
-                                                <Badge color="green" size="xs" className="font-mono text-[10px]">{linkedSQ.quoteId}</Badge>
-                                            ) : <span className="text-slate-300 text-[10px]">—</span>}
-                                        </td>
-                                        <td className="px-4 py-3.5 text-center">
+                                        <td className="px-3 py-2 text-right font-mono text-slate-600">{q.moq}</td>
+                                        <td className="px-3 py-2 text-right font-semibold text-slate-700">{formatMoney(q.price, q.currency)}</td>
+                                        <td className="px-3 py-2 text-right font-bold text-blue-600">{formatMoney(q.price * q.moq, q.currency)}</td>
+                                        <td className="px-3 py-2 text-center">
                                             {q.driveLink && (
-                                                <a href={q.driveLink} target="_blank" rel="noreferrer" className="inline-flex p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                                    <Icons.File className="w-4 h-4" />
+                                                <a href={q.driveLink} target="_blank" rel="noreferrer" className="inline-flex p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                                    <Icons.File className="w-3.5 h-3.5" />
                                                 </a>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3.5 text-right">
+                                        <td className="px-3 py-2 text-right">
                                             <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-2 group-hover:translate-x-0">
-                                                <button onClick={() => setModal({ open: true, type: 'quoteReceived', data: q, isEdit: true })} className="p-1.5 hover:bg-blue-100 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"><Icons.Edit className="w-4 h-4" /></button>
-                                                <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesReceived', q.id) }} className="p-1.5 hover:bg-red-100 rounded-lg text-slate-400 hover:text-red-600 transition-colors"><Icons.X className="w-4 h-4" /></button>
+                                                <button onClick={() => setModal({ open: true, type: 'quoteReceived', data: q, isEdit: true })} className="p-1 hover:bg-blue-100 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"><Icons.Edit className="w-3.5 h-3.5" /></button>
+                                                <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesReceived', q.id) }} className="p-1 hover:bg-red-100 rounded-lg text-slate-400 hover:text-red-600 transition-colors"><Icons.X className="w-3.5 h-3.5" /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -139,22 +136,22 @@ export const QuotesTab = ({ data, actions, setModal }) => {
                     </table>
                 ) : (
                     <table className="w-full text-left border-separate border-spacing-0">
-                        <thead className="sticky top-0 bg-slate-50/80 backdrop-blur-md text-xs font-bold text-slate-500 border-b border-slate-200 z-10 shadow-sm uppercase tracking-wider">
+                        <thead className="sticky top-0 bg-slate-50/80 backdrop-blur-md text-[11px] font-bold text-slate-500 border-b border-slate-200 z-10 shadow-sm uppercase tracking-wider">
                             <tr>
-                                <th className="px-4 py-3 border-b border-slate-200">ID</th>
-                                <th className="px-4 py-3 border-b border-slate-200">Client</th>
-                                <th className="px-4 py-3 border-b border-slate-200 min-w-[200px]">SKU</th>
-                                <th className="px-4 py-3 border-b border-slate-200 text-right">MOQ</th>
-                                <th className="px-4 py-3 border-b border-slate-200 text-right">Price</th>
-                                <th className="px-4 py-3 border-b border-slate-200 text-right">Total</th>
-                                <th className="px-4 py-3 border-b border-slate-200 text-center">Status</th>
-                                <th className="px-4 py-3 border-b border-slate-200">Base Cost</th>
-                                <th className="px-4 py-3 border-b border-slate-200 text-right">Margin</th>
-                                <th className="px-4 py-3 border-b border-slate-200 text-center">Doc</th>
-                                <th className="px-4 py-3 border-b border-slate-200"></th>
+                                <th className="px-3 py-2 border-b border-slate-200">ID</th>
+                                <th className="px-3 py-2 border-b border-slate-200">Client</th>
+                                <th className="px-3 py-2 border-b border-slate-200">SKU</th>
+                                <th className="px-3 py-2 border-b border-slate-200 text-right">MOQ</th>
+                                <th className="px-3 py-2 border-b border-slate-200 text-right">Price</th>
+                                <th className="px-3 py-2 border-b border-slate-200 text-right">Total</th>
+                                <th className="px-3 py-2 border-b border-slate-200 text-center">Status</th>
+                                <th className="px-3 py-2 border-b border-slate-200">Base Cost</th>
+                                <th className="px-3 py-2 border-b border-slate-200 text-right">Margin</th>
+                                <th className="px-3 py-2 border-b border-slate-200 text-center">Doc</th>
+                                <th className="px-3 py-2 border-b border-slate-200"></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 text-[13px]">
+                        <tbody className="divide-y divide-slate-100 text-[11px]">
                             {filteredQuotesSent.map(q => {
                                 const c = clients.find(x => x.id === q.clientId);
                                 const s = skus.find(x => x.id === q.skuId);
@@ -167,22 +164,24 @@ export const QuotesTab = ({ data, actions, setModal }) => {
 
                                 return (
                                     <tr key={q.id} className="group hover:bg-blue-50/30 transition-all duration-200">
-                                        <td className="px-4 py-3.5 font-mono text-slate-400 text-[11px] font-medium">{q.quoteId}</td>
-                                        <td className="px-4 py-3.5">
+                                        <td className="px-3 py-2 font-mono text-slate-400 text-[10px] font-medium">{q.quoteId}</td>
+                                        <td className="px-3 py-2">
                                             <div className="font-semibold text-slate-700">{c?.companyName || 'Unknown'}</div>
                                         </td>
-                                        <td className="px-4 py-3.5">
-                                            <div className="font-medium text-slate-600 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 inline-block">{s?.name || 'Unknown SKU'}</div>
+                                        <td className="px-3 py-2">
+                                            <div className="font-medium text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 inline-block">
+                                                {s?.name || 'Unknown SKU'}
+                                            </div>
                                         </td>
-                                        <td className="px-4 py-3.5 text-right font-mono text-slate-600">{q.moq}</td>
-                                        <td className="px-4 py-3.5 text-right font-semibold text-slate-700">{formatMoney(q.sellingPrice)}</td>
-                                        <td className="px-4 py-3.5 text-right font-bold text-blue-600">{formatMoney(totalRevenue)}</td>
-                                        <td className="px-4 py-3.5 text-center">
+                                        <td className="px-3 py-2 text-right font-mono text-slate-600">{q.moq}</td>
+                                        <td className="px-3 py-2 text-right font-semibold text-slate-700">{formatMoney(q.sellingPrice)}</td>
+                                        <td className="px-3 py-2 text-right font-bold text-blue-600">{formatMoney(totalRevenue)}</td>
+                                        <td className="px-3 py-2 text-center">
                                             <Badge color={q.status === 'Active' ? 'green' : q.status === 'Closed' ? 'slate' : 'yellow'} size="xs" className="uppercase tracking-wider text-[9px]">
                                                 {q.status || 'Draft'}
                                             </Badge>
                                         </td>
-                                        <td className="px-4 py-3.5">
+                                        <td className="px-3 py-2">
                                             {baseQuote ? (
                                                 <div className="flex flex-col">
                                                     <span className="text-[11px] text-slate-600 font-bold">{baseVendor?.companyName}</span>
@@ -190,23 +189,23 @@ export const QuotesTab = ({ data, actions, setModal }) => {
                                                 </div>
                                             ) : <Badge color="yellow" size="xs" className="text-[10px]">No Base</Badge>}
                                         </td>
-                                        <td className="px-4 py-3.5 text-right">
+                                        <td className="px-3 py-2 text-right">
                                             <div className="flex flex-col items-end">
                                                 <span className={`font-bold font-mono text-[12px] ${marginPct > 20 ? 'text-green-600' : marginPct > 10 ? 'text-yellow-600' : 'text-red-600'}`}>{formatMoney(totalMargin)}</span>
                                                 <span className="text-[10px] text-slate-400 font-medium">{marginPct}%</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3.5 text-center">
+                                        <td className="px-3 py-2 text-center">
                                             {q.driveLink && (
-                                                <a href={q.driveLink} target="_blank" rel="noreferrer" className="inline-flex p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                                    <Icons.File className="w-4 h-4" />
+                                                <a href={q.driveLink} target="_blank" rel="noreferrer" className="inline-flex p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                                    <Icons.File className="w-3.5 h-3.5" />
                                                 </a>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3.5 text-right">
+                                        <td className="px-3 py-2 text-right">
                                             <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-2 group-hover:translate-x-0">
-                                                <button onClick={() => setModal({ open: true, type: 'quoteSent', data: q, isEdit: true })} className="p-1.5 hover:bg-blue-100 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"><Icons.Edit className="w-4 h-4" /></button>
-                                                <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesSent', q.id) }} className="p-1.5 hover:bg-red-100 rounded-lg text-slate-400 hover:text-red-600 transition-colors"><Icons.X className="w-4 h-4" /></button>
+                                                <button onClick={() => setModal({ open: true, type: 'quoteSent', data: q, isEdit: true })} className="p-1 hover:bg-blue-100 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"><Icons.Edit className="w-3.5 h-3.5" /></button>
+                                                <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesSent', q.id) }} className="p-1 hover:bg-red-100 rounded-lg text-slate-400 hover:text-red-600 transition-colors"><Icons.X className="w-3.5 h-3.5" /></button>
                                             </div>
                                         </td>
                                     </tr>
