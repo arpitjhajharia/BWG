@@ -4,20 +4,20 @@ import { useBiowearthData } from './hooks/useBiowearthData';
 import { LoginScreen } from './components/LoginScreen';
 
 // Modules
-import { DashboardOverview } from './components/modules/DashboardOverview';
-import { ProductMaster } from './components/modules/ProductMaster';
-import { Formulations } from './components/modules/Formulations';
-import { CompanyMaster } from './components/modules/CompanyMaster';
-import { QuotesTab } from './components/modules/QuotesTab';
-import { TaskBoard } from './components/modules/TaskBoard';
-import { AdminPanel } from './components/modules/AdminPanel';
-import { ORSMaster } from './components/modules/ORSMaster';
-import { RFQMaster } from './components/modules/RFQMaster'; // <--- Import RFQMaster
+import { DashboardOverview } from './components/Modules/DashboardOverview';
+import { ProductMaster } from './components/Modules/ProductMaster';
+import { Formulations } from './components/Modules/Formulations';
+import { CompanyMaster } from './components/Modules/CompanyMaster';
+import { QuotesTab } from './components/Modules/QuotesTab';
+import { TaskBoard } from './components/Modules/TaskBoard';
+import { AdminPanel } from './components/Modules/AdminPanel';
+import { ORSMaster } from './components/Modules/ORSMaster';
+import { RFQMaster } from './components/Modules/RFQMaster'; // <--- Import RFQMaster
 
 // Modals
-import { AppModal } from './components/modals/AppModal';
-import { DetailDashboard } from './components/modals/DetailDashboard';
-import { ActiveQuotesModal } from './components/modals/ActiveQuotesModal';
+import { AppModal } from './components/Modals/AppModal';
+import { DetailDashboard } from './components/Modals/DetailDashboard';
+import { ActiveQuotesModal } from './components/Modals/ActiveQuotesModal';
 
 function App() {
   const { loading, data, actions, currentUser, setCurrentUser } = useBiowearthData();
