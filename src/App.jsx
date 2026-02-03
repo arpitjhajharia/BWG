@@ -14,7 +14,6 @@ import { AdminPanel } from './components/Modules/AdminPanel';
 import { ORSMaster } from './components/Modules/ORSMaster';
 import { RFQMaster } from './components/Modules/RFQMaster';
 import { Inventory } from './components/modules/Inventory';
-import { CurrentInventory } from './components/modules/CurrentInventory';
 
 // Modals
 import { AppModal } from './components/Modals/AppModal';
