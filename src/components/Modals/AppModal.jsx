@@ -256,16 +256,8 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
             ['Billing Address', form.billingAddress || '-'],
             ['Shipping Address', form.shippingAddress || '-'],
             ['UID / Tax ID', `${form.uidType || ''} ${form.uidNumber || ''}`.trim() || '-'],
-            ['Bank Details', form.bankDetails || '-'],
-            ['Drive Link', form.driveLink || '-']
+            ['Bank Details', form.bankDetails || '-']
         ];
-
-        // Client Specific Fields
-        if (modal.type === 'client') {
-            tableBody.push(['Lead Source', form.leadSource || '-']);
-            tableBody.push(['Lead Date', form.leadDate || '-']);
-            tableBody.push(['Status', form.status || '-']);
-        }
 
         autoTable(doc, {
             startY: 35,
@@ -1668,12 +1660,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                 <div className="flex-1 overflow-auto p-6 scroller">
                     {renderContent()}
                 </div>
-                <div className="flex justify-between items-center px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
-                    <div>
-                        {(modal.type === 'vendor' || modal.type === 'client') && (
-                            <Button variant="secondary" icon={Icons.File} onClick={generateCompanyPDF}>PDF Profile</Button>
-                        )}
-                    </div>
+                <div className="flex justify-end items-center px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
                     <div className="flex gap-2">
                         <Button variant="secondary" className="px-5" onClick={() => setModal({ open: false, type: null, data: null, isEdit: false })}>Cancel</Button>
                         <Button className="px-8 shadow-sm" onClick={submit}>

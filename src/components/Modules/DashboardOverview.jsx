@@ -1,8 +1,11 @@
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Icons } from '../ui/Icons';
 import { Card } from '../ui/Card';
 import { formatDate, formatMoney } from '../../utils/helpers';
+
+// Color palette for charts
+const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
 const StatCard = ({ title, value, icon: Icon }) => (
     <div className="bg-white p-4 border border-slate-200 flex items-center justify-between shadow-sm">
@@ -16,8 +19,26 @@ const StatCard = ({ title, value, icon: Icon }) => (
     </div>
 );
 
+// Helper to get month-year string from a date
+const getMonthYear = (date) => {
+    if (!date) return null;
+    const d = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
+    if (isNaN(d.getTime())) return null;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[d.getMonth()]} ${d.getFullYear()}`;
+};
+
+// Helper to sort months chronologically
+const sortMonths = (a, b) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const [mA, yA] = a.split(' ');
+    const [mB, yB] = b.split(' ');
+    if (yA !== yB) return parseInt(yA) - parseInt(yB);
+    return months.indexOf(mA) - months.indexOf(mB);
+};
+
 export const DashboardOverview = ({ data, actions, setActiveTab }) => {
-    const { products, clients, tasks, quotesSent } = data;
+    const { products, clients, tasks, quotesSent, rfqs } = data;
 
     // Calculate Revenue
     const totalRevenue = quotesSent.reduce((acc, q) => acc + (parseFloat(q.sellingPrice || 0) * (parseFloat(q.moq || 0))), 0);
@@ -27,6 +48,65 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
         name: q.quoteId || 'N/A',
         value: parseFloat(q.sellingPrice || 0) * parseFloat(q.moq || 0)
     }));
+
+    // Prepare Leads by Source Chart Data (monthly breakdown)
+    const leadsBySourceData = useMemo(() => {
+        const monthData = {};
+        const allSources = new Set();
+
+        clients.forEach(client => {
+            const monthYear = getMonthYear(client.leadDate || client.createdAt);
+            const source = client.leadSource || 'Unknown';
+
+            if (monthYear) {
+                allSources.add(source);
+                if (!monthData[monthYear]) monthData[monthYear] = {};
+                monthData[monthYear][source] = (monthData[monthYear][source] || 0) + 1;
+            }
+        });
+
+        const sortedMonths = Object.keys(monthData).sort(sortMonths);
+        const sources = Array.from(allSources);
+
+        return {
+            data: sortedMonths.map(month => ({
+                month,
+                ...sources.reduce((acc, src) => ({ ...acc, [src]: monthData[month][src] || 0 }), {})
+            })),
+            sources
+        };
+    }, [clients]);
+
+    // Prepare Leads by Product Format Chart Data (monthly breakdown based on RFQs)
+    const leadsByFormatData = useMemo(() => {
+        const monthData = {};
+        const allFormats = new Set();
+
+        // For each RFQ, get the product format
+        rfqs?.forEach(rfq => {
+            const monthYear = getMonthYear(rfq.createdAt);
+            // Find the product to get its format
+            const product = products.find(p => p.id === rfq.productId);
+            const format = product?.format || 'Unknown';
+
+            if (monthYear) {
+                allFormats.add(format);
+                if (!monthData[monthYear]) monthData[monthYear] = {};
+                monthData[monthYear][format] = (monthData[monthYear][format] || 0) + 1;
+            }
+        });
+
+        const sortedMonths = Object.keys(monthData).sort(sortMonths);
+        const formats = Array.from(allFormats);
+
+        return {
+            data: sortedMonths.map(month => ({
+                month,
+                ...formats.reduce((acc, fmt) => ({ ...acc, [fmt]: monthData[month][fmt] || 0 }), {})
+            })),
+            formats
+        };
+    }, [rfqs, products]);
 
     return (
         <div className="space-y-6">
@@ -114,6 +194,131 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                             <div className="p-8 text-center">
                                 <Icons.Task className="w-8 h-8 text-slate-200 mx-auto mb-2" />
                                 <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">All tasks cleared</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* New Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Leads by Source Chart */}
+                <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
+                        <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Leads by Source (Monthly)</h3>
+                        <button onClick={() => setActiveTab('clients')} className="text-[10px] font-bold text-blue-600 uppercase hover:underline">View All</button>
+                    </div>
+                    <div className="p-4 h-72">
+                        {leadsBySourceData.data.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={leadsBySourceData.data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis
+                                        dataKey="month"
+                                        fontSize={10}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tick={{ fill: '#94a3b8', fontWeight: 600 }}
+                                        dy={10}
+                                    />
+                                    <YAxis
+                                        fontSize={10}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tick={{ fill: '#94a3b8', fontWeight: 600 }}
+                                        allowDecimals={false}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: 'transparent' }}
+                                        contentStyle={{
+                                            borderRadius: '4px',
+                                            border: '1px solid #e2e8f0',
+                                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                                            fontSize: '12px',
+                                            fontWeight: 'bold'
+                                        }}
+                                    />
+                                    <Legend
+                                        wrapperStyle={{ fontSize: '10px', fontWeight: 600 }}
+                                        iconType="square"
+                                        iconSize={8}
+                                    />
+                                    {leadsBySourceData.sources.map((source, idx) => (
+                                        <Bar
+                                            key={source}
+                                            dataKey={source}
+                                            stackId="a"
+                                            fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                                            radius={idx === leadsBySourceData.sources.length - 1 ? [2, 2, 0, 0] : [0, 0, 0, 0]}
+                                        />
+                                    ))}
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                                <Icons.Users className="w-8 h-8 mb-2 opacity-30" />
+                                <p className="text-[10px] font-bold uppercase tracking-wider">No lead data available</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Leads by Product Format Chart */}
+                <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
+                        <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Leads by Product Format (Monthly)</h3>
+                        <button onClick={() => setActiveTab('rfq')} className="text-[10px] font-bold text-blue-600 uppercase hover:underline">View All</button>
+                    </div>
+                    <div className="p-4 h-72">
+                        {leadsByFormatData.data.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={leadsByFormatData.data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis
+                                        dataKey="month"
+                                        fontSize={10}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tick={{ fill: '#94a3b8', fontWeight: 600 }}
+                                        dy={10}
+                                    />
+                                    <YAxis
+                                        fontSize={10}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tick={{ fill: '#94a3b8', fontWeight: 600 }}
+                                        allowDecimals={false}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: 'transparent' }}
+                                        contentStyle={{
+                                            borderRadius: '4px',
+                                            border: '1px solid #e2e8f0',
+                                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                                            fontSize: '12px',
+                                            fontWeight: 'bold'
+                                        }}
+                                    />
+                                    <Legend
+                                        wrapperStyle={{ fontSize: '10px', fontWeight: 600 }}
+                                        iconType="square"
+                                        iconSize={8}
+                                    />
+                                    {leadsByFormatData.formats.map((format, idx) => (
+                                        <Bar
+                                            key={format}
+                                            dataKey={format}
+                                            stackId="a"
+                                            fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                                            radius={idx === leadsByFormatData.formats.length - 1 ? [2, 2, 0, 0] : [0, 0, 0, 0]}
+                                        />
+                                    ))}
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                                <Icons.Product className="w-8 h-8 mb-2 opacity-30" />
+                                <p className="text-[10px] font-bold uppercase tracking-wider">No RFQ data available</p>
                             </div>
                         )}
                     </div>

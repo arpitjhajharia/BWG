@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Icons } from '../ui/Icons';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
@@ -230,6 +232,47 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
         await actions.update('orders', order.id, { docRequirements: newReqs });
     };
 
+    // PDF Generator
+    const generateCompanyPDF = () => {
+        const doc = new jsPDF();
+        const date = new Date();
+        const dateStr = `${String(date.getDate()).padStart(2, '0')}${String(date.getMonth() + 1).padStart(2, '0')}${date.getFullYear()}`;
+        const fileName = `${companyData.companyName || 'Company'}_${dateStr}.pdf`;
+
+        // Header
+        doc.setFontSize(18);
+        doc.text(`${isVendor ? 'Vendor' : 'Client'} Profile`, 14, 20);
+
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${date.toLocaleDateString()}`, 14, 28);
+        doc.setTextColor(0);
+
+        // Table Data
+        const tableBody = [
+            ['Company Name', companyData.companyName || '-'],
+            ['Official Name', companyData.officialName || '-'],
+            ['Website', companyData.website || '-'],
+            ['Country', companyData.country || '-'],
+            ['Billing Address', companyData.billingAddress || '-'],
+            ['Shipping Address', companyData.shippingAddress || '-'],
+            ['UID / Tax ID', `${companyData.uidType || ''} ${companyData.uidNumber || ''}`.trim() || '-'],
+            ['Bank Details', companyData.bankDetails || '-']
+        ];
+
+        autoTable(doc, {
+            startY: 35,
+            head: [['Field', 'Details']],
+            body: tableBody,
+            theme: 'grid',
+            headStyles: { fillColor: [51, 65, 85] },
+            columnStyles: { 0: { cellWidth: 50, fontStyle: 'bold' } },
+            styles: { fontSize: 10, cellPadding: 3 }
+        });
+
+        doc.save(fileName);
+    };
+
     return (
         <div className="fixed inset-0 bg-slate-50/50 backdrop-blur-sm z-[60] overflow-y-auto animate-fade-in scroller">
             <div className="min-h-screen bg-white max-w-[1440px] mx-auto shadow-2xl flex flex-col">
@@ -243,8 +286,9 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                        {companyData.website && <a href={companyData.website} target="_blank" rel="noreferrer" className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors"><Icons.ExternalLink className="w-3.5 h-3.5" /></a>}
-                        {companyData.driveLink && <a href={companyData.driveLink} target="_blank" rel="noreferrer" className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors"><Icons.Folder className="w-3.5 h-3.5" /></a>}
+                        {companyData.website && <a href={companyData.website} target="_blank" rel="noreferrer" className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors" title="Website"><Icons.ExternalLink className="w-3.5 h-3.5" /></a>}
+                        {companyData.driveLink && <a href={companyData.driveLink} target="_blank" rel="noreferrer" className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors" title="Google Drive"><Icons.Folder className="w-3.5 h-3.5" /></a>}
+                        <button onClick={generateCompanyPDF} className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors" title="Download PDF Profile"><Icons.File className="w-3.5 h-3.5" /></button>
                         <div className="w-px h-4 bg-slate-200 mx-2"></div>
                         <Button variant="secondary" size="sm" onClick={() => setModal({ open: true, type: isVendor ? 'vendor' : 'client', data: companyData, isEdit: true })} className="h-7 text-[10px] px-3">Edit Profile</Button>
                         <button onClick={() => setDetailView({ open: false, type: null, data: null })} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><Icons.X className="w-4 h-4" /></button>
