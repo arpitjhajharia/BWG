@@ -14,6 +14,7 @@ import { AdminPanel } from './components/Modules/AdminPanel';
 import { ORSMaster } from './components/Modules/ORSMaster';
 import { RFQMaster } from './components/Modules/RFQMaster';
 import { Inventory } from './components/modules/Inventory';
+import { UserGuideOverlay } from './components/ui/UserGuideOverlay';
 
 // Modals
 import { AppModal } from './components/Modals/AppModal';
@@ -30,6 +31,7 @@ function App() {
   const [detailView, setDetailView] = useState({ open: false, type: null, data: null });
   const [activeQuotesView, setActiveQuotesView] = useState({ open: false, productId: null });
   const [targetFormulationId, setTargetFormulationId] = useState(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   if (loading) return <div className="h-screen flex items-center justify-center text-slate-400">Loading Biowearth OS...</div>;
   if (!currentUser) return <LoginScreen userProfiles={data.userProfiles} onLogin={setCurrentUser} />;
@@ -130,21 +132,10 @@ function App() {
             </div>
           </div>
 
-          {/* Global Search Bar (Visual Only) */}
-          <div className="flex-1 max-w-lg mx-8 hidden md:block">
-            <div className="relative group">
-              <Icons.Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
-              <input
-                type="text"
-                placeholder="COMMAND + K TO SEARCH..."
-                className="w-full bg-slate-50 border border-slate-200/60 hover:border-slate-300 focus:border-blue-400 focus:ring-4 focus:ring-blue-50/50 rounded py-2 pl-10 pr-4 text-[10px] font-bold tracking-widest transition-all outline-none"
-              />
-            </div>
-          </div>
 
           {/* Right Actions */}
           <div className="flex items-center gap-1.5">
-            <button className="p-2 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-50 transition-all" title="Help">
+            <button onClick={() => setShowGuide(true)} className="p-2 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-50 transition-all" title="Help">
               <Icons.Info className="w-4 h-4" />
             </button>
             <div className="w-px h-4 bg-slate-200 mx-1"></div>
@@ -183,6 +174,7 @@ function App() {
       <DetailDashboard detailView={detailView} setDetailView={setDetailView} data={data} actions={actions} setModal={setModal} userProfiles={data.userProfiles} />
       <ActiveQuotesModal activeQuotesView={activeQuotesView} setActiveQuotesView={setActiveQuotesView} data={data} />
       <AppModal modal={modal} setModal={setModal} data={data} actions={actions} currentUser={currentUser} />
+      {showGuide && <UserGuideOverlay activeTab={activeTab} onClose={() => setShowGuide(false)} />}
     </div>
   );
 }
