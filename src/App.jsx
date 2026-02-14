@@ -47,7 +47,6 @@ function App() {
     { id: 'quotes', label: 'Quotes', icon: Icons.Money },
     { id: 'tasks', label: 'Tasks', icon: Icons.Task },
     { id: 'inventory', label: 'Inventory', icon: Icons.Box },
-    { id: 'stock', label: 'Stock', icon: Icons.Stock },
   ];
 
   // Admin item removed from sidebar - now accessed via settings icon
@@ -164,7 +163,6 @@ function App() {
             {activeTab === 'quotes' && <QuotesTab data={data} actions={actions} setModal={setModal} />}
             {activeTab === 'tasks' && <TaskBoard data={data} actions={actions} setModal={setModal} />}
             {activeTab === 'inventory' && <Inventory data={data} actions={actions} setModal={setModal} />}
-            {activeTab === 'stock' && <CurrentInventory data={data} />}
             {activeTab === 'admin' && <AdminPanel currentUser={currentUser} data={data} actions={actions} setModal={setModal} />}
           </div>
         </main>
