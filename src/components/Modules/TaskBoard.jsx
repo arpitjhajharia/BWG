@@ -162,7 +162,7 @@ export const TaskBoard = ({ data, actions, setModal }) => {
         const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
         return (
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm h-full flex flex-col overflow-auto">
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-4">
                         <h3 className="font-bold text-lg text-slate-800">
@@ -182,11 +182,11 @@ export const TaskBoard = ({ data, actions, setModal }) => {
                 <div className="grid grid-cols-7 border-b border-slate-200 shrink-0">
                     {weekDays.map(d => <div key={d} className="p-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">{d}</div>)}
                 </div>
-                <div className={`grid grid-cols-7 flex-1 overflow-y-auto ${isWeek ? '' : 'auto-rows-fr'}`}>
+                <div className="grid grid-cols-7" style={{ gridAutoRows: isWeek ? undefined : 'minmax(100px, auto)' }}>
                     {days.map((day, i) => {
                         if (!day) return <div key={i} className="bg-slate-50 border-r border-b border-slate-100"></div>;
 
-                        const dateStr = day.toISOString().split('T')[0];
+                        const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
                         const dayTasks = tasks.filter(t => t.dueDate === dateStr);
                         const isToday = new Date().toDateString() === day.toDateString();
 
@@ -244,37 +244,37 @@ export const TaskBoard = ({ data, actions, setModal }) => {
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr>
-                            <th className="sticky top-0 bg-slate-50 p-3 text-xs font-bold text-slate-500 border-b"></th>
-                            <th className="sticky top-0 bg-slate-50 p-3 text-xs font-bold text-slate-500 border-b">Task</th>
-                            <th className="sticky top-0 bg-slate-50 p-3 text-xs font-bold text-slate-500 border-b">Due Date</th>
-                            <th className="sticky top-0 bg-slate-50 p-3 text-xs font-bold text-slate-500 border-b">Assignee</th>
-                            <th className="sticky top-0 bg-slate-50 p-3 text-xs font-bold text-slate-500 border-b">Priority</th>
-                            <th className="sticky top-0 bg-slate-50 p-3 text-xs font-bold text-slate-500 border-b">Related To</th>
-                            <th className="sticky top-0 bg-slate-50 p-3 text-xs font-bold text-slate-500 border-b">Action</th>
+                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b w-8"></th>
+                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b">Task</th>
+                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b w-24">Due Date</th>
+                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b w-28">Assignee</th>
+                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b w-20">Priority</th>
+                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b w-36">Related To</th>
+                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b w-16">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredTasks.map(t => (
                             <tr key={t.id} className="hover:bg-slate-50 group border-b border-slate-100 last:border-0">
-                                <td className="p-3">
+                                <td className="px-3 py-1.5">
                                     <input
                                         type="checkbox"
                                         checked={t.status === 'Completed'}
                                         onChange={(e) => actions.update('tasks', t.id, { status: e.target.checked ? 'Completed' : 'Pending' })}
-                                        className="rounded text-blue-600 focus:ring-0 cursor-pointer"
+                                        className="rounded text-blue-600 focus:ring-0 cursor-pointer w-3.5 h-3.5"
                                     />
                                 </td>
-                                <td className={`p-3 font-medium ${t.status === 'Completed' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                <td className={`px-3 py-1.5 font-medium text-[12px] ${t.status === 'Completed' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
                                     {t.title}
                                 </td>
-                                <td className="p-3 text-slate-500 font-mono text-xs">{formatDate(t.dueDate)}</td>
-                                <td className="p-3">
-                                    {t.assignee ? <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full border border-slate-200">{t.assignee}</span> : '-'}
+                                <td className="px-3 py-1.5 text-slate-500 font-mono text-[11px] whitespace-nowrap">{formatDate(t.dueDate)}</td>
+                                <td className="px-3 py-1.5">
+                                    {t.assignee ? <span className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-px rounded-full border border-slate-200">{t.assignee}</span> : '-'}
                                 </td>
-                                <td className="p-3">
-                                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${t.priority === 'High' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>{t.priority}</span>
+                                <td className="px-3 py-1.5">
+                                    <span className={`text-[9px] font-bold uppercase px-1.5 py-px rounded ${t.priority === 'High' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>{t.priority}</span>
                                 </td>
-                                <td className="p-3 text-xs text-slate-500">
+                                <td className="px-3 py-1.5 text-[11px] text-slate-500">
                                     {t.relatedName ? (
                                         <div className="flex items-center gap-1">
                                             <span className={`w-1.5 h-1.5 rounded-full ${t.contextType === 'Vendor' ? 'bg-purple-400' : 'bg-green-400'}`}></span>
@@ -282,8 +282,8 @@ export const TaskBoard = ({ data, actions, setModal }) => {
                                         </div>
                                     ) : '-'}
                                 </td>
-                                <td className="p-3">
-                                    <button onClick={() => setModal({ open: true, type: 'task', data: t, isEdit: true })} className="text-slate-400 hover:text-blue-600"><Icons.Edit className="w-4 h-4" /></button>
+                                <td className="px-3 py-1.5">
+                                    <button onClick={() => setModal({ open: true, type: 'task', data: t, isEdit: true })} className="text-slate-400 hover:text-blue-600"><Icons.Edit className="w-3 h-3" /></button>
                                 </td>
                             </tr>
                         ))}
@@ -294,10 +294,10 @@ export const TaskBoard = ({ data, actions, setModal }) => {
     );
 
     return (
-        <div className="space-y-4 h-[calc(100vh-140px)] flex flex-col">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm shrink-0">
-                <div className="flex items-center gap-3">
-                    <h2 className="font-bold text-lg text-slate-800">Tasks</h2>
+        <div className="space-y-2 h-[calc(100vh-140px)] flex flex-col">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm shrink-0">
+                <div className="flex items-center gap-2">
+                    <h2 className="font-bold text-base text-slate-800">Tasks</h2>
                     <div className="h-6 w-px bg-slate-300 mx-1"></div>
                     <div className="flex bg-slate-100 rounded p-0.5">
                         <button onClick={() => setViewMode('list')} className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`} title="Table View"><Icons.List className="w-4 h-4" /></button>

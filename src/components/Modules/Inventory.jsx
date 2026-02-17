@@ -315,7 +315,7 @@ export const Inventory = ({ data, actions, setModal }) => {
 
     // Sub-components
     const SortHeader = ({ label, sortKey, className = '' }) => (
-        <th className={`px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest cursor-pointer hover:text-blue-600 transition-colors ${className}`} onClick={() => handleSort(sortKey)}>
+        <th className={`px-3 py-1.5 text-[10px] font-bold text-slate-400 tracking-widest cursor-pointer hover:text-blue-600 transition-colors ${className}`} onClick={() => handleSort(sortKey)}>
             <div className="flex items-center gap-1">
                 {label}
                 {sort.key === sortKey && (sort.dir === 'asc' ? <Icons.ArrowUp className="w-3 h-3" /> : <Icons.ArrowDown className="w-3 h-3" />)}
@@ -324,7 +324,7 @@ export const Inventory = ({ data, actions, setModal }) => {
     );
 
     const TypeBadge = ({ type }) => (
-        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${type === 'Inward' ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : 'text-red-700 bg-red-50 border-red-100'}`}>
+        <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-px rounded border ${type === 'Inward' ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : 'text-red-700 bg-red-50 border-red-100'}`}>
             {type}
         </span>
     );
@@ -340,16 +340,16 @@ export const Inventory = ({ data, actions, setModal }) => {
     };
 
     return (
-        <div className="flex flex-col h-full animate-fade-in space-y-4">
+        <div className="flex flex-col h-full animate-fade-in space-y-2">
             {/* Header with View Toggle */}
-            <div className="flex justify-between items-center shrink-0 border-b border-slate-200 pb-3">
-                <div className="flex items-center gap-4">
+            <div className="flex justify-between items-center shrink-0 border-b border-slate-200 pb-2">
+                <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
-                        <div className="p-2 bg-slate-100 rounded border border-slate-200">
+                        <div className="p-1.5 bg-slate-100 rounded border border-slate-200">
                             <Icons.Box className="w-5 h-5 text-slate-600" />
                         </div>
                         <div>
-                            <h2 className="font-bold text-lg text-slate-800 leading-tight">Inventory</h2>
+                            <h2 className="font-bold text-base text-slate-800 leading-tight">Inventory</h2>
                             <div className="flex items-center gap-3 mt-0.5">
                                 <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{inwardCount} In</span>
                                 <span className="text-slate-300">|</span>
@@ -361,13 +361,13 @@ export const Inventory = ({ data, actions, setModal }) => {
                     {/* View Mode Toggle */}
                     <div className="flex bg-slate-100 rounded-lg p-0.5 border border-slate-200">
                         <button
-                            className={`px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all ${viewMode === 'transactions' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${viewMode === 'transactions' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                             onClick={() => setViewMode('transactions')}
                         >
                             Transactions
                         </button>
                         <button
-                            className={`px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all ${viewMode === 'stock' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${viewMode === 'stock' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                             onClick={() => setViewMode('stock')}
                         >
                             Stock
@@ -376,7 +376,7 @@ export const Inventory = ({ data, actions, setModal }) => {
                 </div>
 
                 {/* Actions - Different for each view */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     {viewMode === 'transactions' ? (
                         <>
                             <select className="bg-white border border-slate-300 text-[11px] font-bold text-slate-600 rounded-md px-3 py-1.5 outline-none w-44" value={selectedSkuId} onChange={e => setSelectedSkuId(e.target.value)}>
@@ -422,7 +422,7 @@ export const Inventory = ({ data, actions, setModal }) => {
                             </div>
                         </>
                     )}
-                    <Button icon={Icons.Plus} onClick={() => setModal({ open: true, type: 'inventoryRecord' })} className="shadow-sm uppercase text-[11px] tracking-widest px-5">
+                    <Button icon={Icons.Plus} onClick={() => setModal({ open: true, type: 'inventoryRecord' })} className="shadow-sm uppercase text-[10px] tracking-widest px-4">
                         + New
                     </Button>
                 </div>
@@ -476,47 +476,45 @@ export const Inventory = ({ data, actions, setModal }) => {
                                     <SortHeader label="Date" sortKey="date" />
                                     <SortHeader label="Party" sortKey="partyName" />
                                     <SortHeader label="SKU" sortKey="skuName" />
-                                    <th className="px-4 py-2 text-[10px] font-bold text-emerald-500 tracking-widest text-right">In</th>
-                                    <th className="px-4 py-2 text-[10px] font-bold text-red-500 tracking-widest text-right">Out</th>
-                                    <th className="px-4 py-2 text-[10px] font-bold text-blue-500 tracking-widest text-right">Balance</th>
-                                    <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest">Notes</th>
-                                    <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest text-right">Actions</th>
+                                    <th className="px-3 py-1.5 text-[10px] font-bold text-emerald-500 tracking-widest text-right">In</th>
+                                    <th className="px-3 py-1.5 text-[10px] font-bold text-red-500 tracking-widest text-right">Out</th>
+                                    <th className="px-3 py-1.5 text-[10px] font-bold text-blue-500 tracking-widest text-right">Balance</th>
+                                    <th className="px-3 py-1.5 text-[10px] font-bold text-slate-400 tracking-widest">Notes</th>
+                                    <th className="px-3 py-1.5 text-[10px] font-bold text-slate-400 tracking-widest text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {filteredRecords.map(record => (
                                     <tr key={`${record.recordType}-${record.id}`} className="hover:bg-slate-50/80 transition-colors group">
-                                        <td className="px-4 py-3"><span className="text-[12px] font-bold text-slate-600">{formatDate(record.date)}</span></td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-[12px] font-semibold text-slate-700">{record.partyName}</span>
-                                                <PartyTypeBadge type={record.partyType} />
-                                            </div>
+                                        <td className="px-3 py-1.5"><span className="text-[11px] font-bold text-slate-600 whitespace-nowrap">{formatDate(record.date)}</span></td>
+                                        <td className="px-3 py-1.5">
+                                            <span className="text-[12px] font-semibold text-slate-700">{record.partyName}</span>
+                                            <span className="ml-1"><PartyTypeBadge type={record.partyType} /></span>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <code className="text-[11px] font-bold text-slate-500 font-mono bg-slate-50 px-1 py-0.5 border border-slate-100 rounded">{record.skuName}</code>
+                                        <td className="px-3 py-1.5">
+                                            <code className="text-[10px] font-bold text-slate-500 font-mono bg-slate-50 px-1 py-px border border-slate-100 rounded">{record.skuName}</code>
                                         </td>
-                                        <td className="px-4 py-3 text-right">
-                                            {record.recordType === 'Inward' && <span className="text-[13px] font-bold text-emerald-600">+{record.quantity}</span>}
+                                        <td className="px-3 py-1.5 text-right">
+                                            {record.recordType === 'Inward' && <span className="text-[12px] font-bold text-emerald-600">+{record.quantity}</span>}
                                         </td>
-                                        <td className="px-4 py-3 text-right">
-                                            {record.recordType === 'Outward' && <span className="text-[13px] font-bold text-red-600">-{record.quantity}</span>}
+                                        <td className="px-3 py-1.5 text-right">
+                                            {record.recordType === 'Outward' && <span className="text-[12px] font-bold text-red-600">-{record.quantity}</span>}
                                         </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <span className={`text-[13px] font-black ${record.balance >= 0 ? 'text-blue-700' : 'text-red-700'}`}>{record.balance}</span>
+                                        <td className="px-3 py-1.5 text-right">
+                                            <span className={`text-[12px] font-black ${record.balance >= 0 ? 'text-blue-700' : 'text-red-700'}`}>{record.balance}</span>
                                             <span className="text-[9px] font-bold text-slate-400 uppercase ml-1">{record.unit}</span>
                                         </td>
-                                        <td className="px-4 py-3"><span className="text-[11px] text-slate-500 max-w-[150px] truncate block">{record.notes || '-'}</span></td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => handleEdit(record)} className="p-2 bg-white border border-slate-200 rounded text-blue-500 hover:border-blue-300 hover:bg-blue-50 transition-all shadow-sm"><Icons.Edit className="w-3.5 h-3.5" /></button>
-                                                <button onClick={() => handleDelete(record)} className="p-2 bg-white border border-slate-200 rounded text-red-400 hover:border-red-300 hover:bg-red-50 transition-all shadow-sm"><Icons.X className="w-3.5 h-3.5" /></button>
+                                        <td className="px-3 py-1.5"><span className="text-[10px] text-slate-500 max-w-[120px] truncate block">{record.notes || '-'}</span></td>
+                                        <td className="px-3 py-1.5 text-right">
+                                            <div className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => handleEdit(record)} className="p-1 bg-white border border-slate-200 rounded text-blue-500 hover:border-blue-300 hover:bg-blue-50 transition-all"><Icons.Edit className="w-3 h-3" /></button>
+                                                <button onClick={() => handleDelete(record)} className="p-1 bg-white border border-slate-200 rounded text-red-400 hover:border-red-300 hover:bg-red-50 transition-all"><Icons.X className="w-3 h-3" /></button>
                                             </div>
                                         </td>
                                     </tr>
                                 ))}
                                 {filteredRecords.length === 0 && (
-                                    <tr><td colSpan="8" className="py-20 text-center">
+                                    <tr><td colSpan="8" className="py-12 text-center">
                                         <div className="flex flex-col items-center justify-center text-slate-300">
                                             <Icons.Box className="w-12 h-12 mb-2 opacity-20" />
                                             <p className="text-xs font-bold uppercase tracking-[0.2em]">No Records</p>
@@ -529,42 +527,42 @@ export const Inventory = ({ data, actions, setModal }) => {
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-slate-50/80 border-b border-slate-200 uppercase sticky top-0 z-10">
                                 <tr>
-                                    <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest w-32">Format</th>
-                                    <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest">Product</th>
-                                    <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest">SKU</th>
-                                    <th className="px-4 py-2 text-[10px] font-bold text-blue-500 tracking-widest text-right">Closing Balance</th>
+                                    <th className="px-3 py-1.5 text-[10px] font-bold text-slate-400 tracking-widest w-28">Format</th>
+                                    <th className="px-3 py-1.5 text-[10px] font-bold text-slate-400 tracking-widest">Product</th>
+                                    <th className="px-3 py-1.5 text-[10px] font-bold text-slate-400 tracking-widest">SKU</th>
+                                    <th className="px-3 py-1.5 text-[10px] font-bold text-blue-500 tracking-widest text-right">Closing Balance</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {stockData.items.map((item, idx) => (
                                     <tr key={item.skuId} className="hover:bg-slate-50/80 transition-colors">
-                                        <td className="px-4 py-2.5">
+                                        <td className="px-3 py-1.5">
                                             {item.isFirstInFormat && (
-                                                <span className="text-[11px] font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-2 py-1 rounded border border-purple-100">
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-purple-600 bg-purple-50 px-1.5 py-px rounded border border-purple-100">
                                                     {item.format}
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-2.5">
+                                        <td className="px-3 py-1.5">
                                             {item.isFirstInProduct && (
-                                                <span className="text-[13px] font-bold text-slate-700">{item.productName}</span>
+                                                <span className="text-[12px] font-bold text-slate-700">{item.productName}</span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-2.5">
-                                            <code className="text-[11px] font-bold text-slate-500 font-mono bg-slate-50 px-1.5 py-0.5 border border-slate-100 rounded">
+                                        <td className="px-3 py-1.5">
+                                            <code className="text-[10px] font-bold text-slate-500 font-mono bg-slate-50 px-1 py-px border border-slate-100 rounded">
                                                 {item.skuName}
                                             </code>
                                         </td>
-                                        <td className="px-4 py-2.5 text-right">
-                                            <span className={`text-[14px] font-black ${item.closingBalance >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
+                                        <td className="px-3 py-1.5 text-right">
+                                            <span className={`text-[13px] font-black ${item.closingBalance >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
                                                 {item.closingBalance.toLocaleString()}
                                             </span>
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">{item.unit}</span>
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase ml-1">{item.unit}</span>
                                         </td>
                                     </tr>
                                 ))}
                                 {stockData.items.length === 0 && (
-                                    <tr><td colSpan="4" className="py-20 text-center">
+                                    <tr><td colSpan="4" className="py-12 text-center">
                                         <div className="flex flex-col items-center justify-center text-slate-300">
                                             <Icons.Box className="w-12 h-12 mb-2 opacity-20" />
                                             <p className="text-xs font-bold uppercase tracking-[0.2em]">No Stock Data</p>

@@ -152,12 +152,12 @@ export const RFQMaster = ({ data, actions, setModal }) => {
     };
 
     return (
-        <div className="flex flex-col h-full animate-fade-in space-y-4">
+        <div className="flex flex-col h-full animate-fade-in space-y-2">
             {/* Toolbar */}
             <div className="flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-2">
-                    <h2 className="font-bold text-lg text-slate-800">RFQ</h2>
-                    <span className="text-slate-400 font-light text-lg">/</span>
+                    <h2 className="font-bold text-base text-slate-800">RFQ</h2>
+                    <span className="text-slate-400 font-light text-base">/</span>
                     <span className="text-[13px] font-semibold text-slate-500">{filtered.length} records</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -179,13 +179,13 @@ export const RFQMaster = ({ data, actions, setModal }) => {
                 <table className="w-full text-left border-collapse">
                     <thead className="sticky top-0 bg-slate-50 text-xs font-semibold text-slate-500 border-b border-slate-200 z-10 shadow-sm">
                         <tr>
-                            <th className="px-3 py-2 w-32">Date</th>
-                            <th className="px-3 py-2 w-48">Vendor</th>
-                            <th className="px-3 py-2 w-24">Type</th>
-                            <th className="px-3 py-2">Item Details</th>
-                            <th className="px-3 py-2 w-32">Qty / Target</th>
-                            <th className="px-3 py-2 w-32">Country</th>
-                            <th className="px-3 py-2 text-right w-24">Actions</th>
+                            <th className="px-3 py-1.5 w-24">Date</th>
+                            <th className="px-3 py-1.5 w-36">Vendor</th>
+                            <th className="px-3 py-1.5 w-20">Type</th>
+                            <th className="px-3 py-1.5">Item Details</th>
+                            <th className="px-3 py-1.5 w-28">Qty / Target</th>
+                            <th className="px-3 py-1.5 w-28">Country</th>
+                            <th className="px-3 py-1.5 text-right w-20">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-[13px]">
@@ -193,56 +193,34 @@ export const RFQMaster = ({ data, actions, setModal }) => {
                             const details = getRfqDetails(item);
                             return (
                                 <tr key={item.id} className="hover:bg-blue-50/30 group transition-colors border-b border-slate-50 last:border-0">
-                                    <td className="px-3 py-2 whitespace-nowrap text-slate-500 font-mono text-[11px]">{formatDate(item.createdAt)}</td>
-                                    <td className="px-3 py-2 font-medium text-slate-700 truncate max-w-[150px]" title={getVendorName(item.vendorId)}>{getVendorName(item.vendorId)}</td>
-                                    <td className="px-3 py-2">
-                                        <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${item.requestType === 'Custom' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                                    <td className="px-3 py-1.5 whitespace-nowrap text-slate-500 font-mono text-[11px]">{formatDate(item.createdAt)}</td>
+                                    <td className="px-3 py-1.5 font-medium text-slate-700 text-[12px] truncate max-w-[130px]" title={getVendorName(item.vendorId)}>{getVendorName(item.vendorId)}</td>
+                                    <td className="px-3 py-1.5">
+                                        <span className={`text-[9px] font-bold uppercase tracking-wider px-1 py-px rounded border ${item.requestType === 'Custom' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
                                             {item.requestType}
                                         </span>
                                     </td>
-                                    <td className="px-3 py-2">
-                                        <div className="font-semibold text-slate-800">{details.title}</div>
-                                        <div className="text-[11px] text-slate-400 truncate max-w-[200px]">{details.subtitle}</div>
+                                    <td className="px-3 py-1.5">
+                                        <span className="font-semibold text-slate-800 text-[12px]">{details.title}</span>
+                                        <span className="text-[10px] text-slate-400 ml-1 truncate">{details.subtitle}</span>
                                     </td>
-                                    <td className="px-3 py-2">
-                                        <div className="text-slate-700 font-medium">{item.qty} <span className="text-[10px] text-slate-400 font-normal">units</span></div>
-                                        {item.targetPrice && (
-                                            <div className="text-[11px] text-slate-500 font-mono bg-slate-50 inline-block px-1 rounded border border-slate-100">
-                                                {item.currency} {item.targetPrice}
-                                            </div>
-                                        )}
+                                    <td className="px-3 py-1.5">
+                                        <span className="text-slate-700 font-medium text-[12px]">{item.qty} <span className="text-[9px] text-slate-400 font-normal">units</span></span>
+                                        {item.targetPrice && <span className="text-[10px] text-slate-500 font-mono bg-slate-50 px-1 rounded border border-slate-100 ml-1">{item.currency} {item.targetPrice}</span>}
                                     </td>
-                                    <td className="px-3 py-2 text-slate-600">{item.countryOfSale || '-'}</td>
-                                    <td className="px-3 py-2 text-right">
-                                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={(e) => generatePDF(e, item)}
-                                                className="p-1 hover:bg-green-100 rounded text-slate-400 hover:text-green-600 transition-colors"
-                                                title="Download PDF"
-                                            >
-                                                <Icons.File className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button
-                                                onClick={() => setModal({ open: true, type: 'rfq', data: item, isEdit: true })}
-                                                className="p-1 hover:bg-blue-100 rounded text-slate-400 hover:text-blue-600 transition-colors"
-                                                title="Edit"
-                                            >
-                                                <Icons.Edit className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button
-                                                onClick={() => actions.del('rfqs', item.id)}
-                                                className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600 transition-colors"
-                                                title="Delete"
-                                            >
-                                                <Icons.Trash className="w-3.5 h-3.5" />
-                                            </button>
+                                    <td className="px-3 py-1.5 text-slate-600 text-[11px]">{item.countryOfSale || '-'}</td>
+                                    <td className="px-3 py-1.5 text-right">
+                                        <div className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={(e) => generatePDF(e, item)} className="p-1 hover:bg-green-100 rounded text-slate-400 hover:text-green-600 transition-colors" title="Download PDF"><Icons.File className="w-3 h-3" /></button>
+                                            <button onClick={() => setModal({ open: true, type: 'rfq', data: item, isEdit: true })} className="p-1 hover:bg-blue-100 rounded text-slate-400 hover:text-blue-600 transition-colors" title="Edit"><Icons.Edit className="w-3 h-3" /></button>
+                                            <button onClick={() => actions.del('rfqs', item.id)} className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600 transition-colors" title="Delete"><Icons.Trash className="w-3 h-3" /></button>
                                         </div>
                                     </td>
                                 </tr>
                             );
                         })}
                         {filtered.length === 0 && (
-                            <tr><td colSpan="7" className="p-8 text-center text-slate-400 text-xs italic">No RFQs found. Click "New" to create one.</td></tr>
+                            <tr><td colSpan="7" className="p-6 text-center text-slate-400 text-xs italic">No RFQs found. Click "New" to create one.</td></tr>
                         )}
                     </tbody>
                 </table>

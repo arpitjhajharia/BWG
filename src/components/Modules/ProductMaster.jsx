@@ -117,14 +117,14 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
     };
 
     return (
-        <div className="flex flex-col h-full animate-fade-in space-y-4">
-            <div className="flex justify-between items-center shrink-0 border-b border-slate-200 pb-3">
+        <div className="flex flex-col h-full animate-fade-in space-y-2">
+            <div className="flex justify-between items-center shrink-0 border-b border-slate-200 pb-2">
                 <div className="flex items-center gap-2">
-                    <div className="p-2 bg-slate-100 rounded border border-slate-200">
+                    <div className="p-1.5 bg-slate-100 rounded border border-slate-200">
                         <Icons.Product className="w-5 h-5 text-slate-600" />
                     </div>
                     <div>
-                        <h2 className="font-bold text-lg text-slate-800 leading-tight">Product Catalog</h2>
+                        <h2 className="font-bold text-base text-slate-800 leading-tight">Product Catalog</h2>
                         <div className="flex items-center gap-1.5 mt-0.5">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredProducts.length} Product Models Managed</span>
                         </div>
@@ -164,11 +164,11 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
                         </button>
                     </div>
 
-                    <Button icon={Icons.Plus} onClick={() => setModal({ open: true, type: 'product' })} className="shadow-sm uppercase text-[11px] tracking-widest px-5">+ New Product</Button>
+                    <Button icon={Icons.Plus} onClick={() => setModal({ open: true, type: 'product' })} className="shadow-sm uppercase text-[11px] tracking-widest px-5">New</Button>
                 </div>
             </div>
 
-            <div className="flex flex-col gap-3 pb-10">
+            <div className="flex flex-col gap-1.5 pb-10">
                 {filteredProducts.map(p => {
                     const pSkus = skus.filter(s => s.productId === p.id);
                     const isExpanded = expandedProduct === p.id;
@@ -178,64 +178,57 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
 
                     return (
                         <div key={p.id} className={`bg-white border transition-all overflow-hidden ${isExpanded ? 'border-blue-300 ring-1 ring-blue-100 shadow-md transform scale-[1.002]' : 'border-slate-200 hover:border-blue-400 shadow-sm'}`}>
-                            <div className={`p-3.5 flex items-center justify-between cursor-pointer group transition-colors ${isExpanded ? 'bg-blue-50/30' : 'hover:bg-slate-50/30'}`} onClick={() => setExpandedProduct(isExpanded ? null : p.id)}>
-                                <div className="flex items-center gap-4 min-w-0">
-                                    <div className={`w-11 h-11 rounded border flex items-center justify-center font-bold text-sm transition-colors ${isExpanded ? 'bg-blue-100 border-blue-200 text-blue-700 shadow-inner' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                            <div className={`px-3 py-2 flex items-center justify-between cursor-pointer group transition-colors ${isExpanded ? 'bg-blue-50/30' : 'hover:bg-slate-50/30'}`} onClick={() => setExpandedProduct(isExpanded ? null : p.id)}>
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className={`w-7 h-7 rounded border flex items-center justify-center font-bold text-xs transition-colors shrink-0 ${isExpanded ? 'bg-blue-100 border-blue-200 text-blue-700 shadow-inner' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
                                         {p.name.charAt(0)}
                                     </div>
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h3 className="font-bold text-[15px] text-slate-800 leading-none">{p.name}</h3>
-                                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200">{p.format}</span>
-                                            {p.driveLink && <a href={p.driveLink} target="_blank" onClick={e => e.stopPropagation()} className="text-slate-300 hover:text-blue-500 transition-colors"><Icons.Link className="w-3.5 h-3.5" /></a>}
+                                    <div className="min-w-0 flex items-center gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-bold text-[13px] text-slate-800 leading-none">{p.name}</h3>
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 bg-white px-1 py-px rounded border border-slate-200">{p.format}</span>
+                                            {p.driveLink && <a href={p.driveLink} target="_blank" onClick={e => e.stopPropagation()} className="text-slate-300 hover:text-blue-500 transition-colors"><Icons.Link className="w-3 h-3" /></a>}
                                         </div>
-                                        <div className="flex items-center gap-4 text-[10px] uppercase font-bold tracking-wider">
-                                            <div className="flex items-center gap-1.5 text-slate-500">
+                                        <div className="flex items-center gap-3 text-[10px] uppercase font-bold tracking-wider">
+                                            <div className="flex items-center gap-1 text-slate-500">
                                                 <Icons.Columns className="w-3 h-3 text-slate-300" />
-                                                <span>{pSkus.length} <span className="text-[9px] opacity-70">Variations</span></span>
+                                                <span>{pSkus.length} <span className="text-[9px] opacity-70">Vars</span></span>
                                             </div>
-                                            <div className="w-px h-2.5 bg-slate-200"></div>
-                                            <div className="flex items-center gap-1.5 text-slate-500">
+                                            <div className="flex items-center gap-1 text-slate-500">
                                                 <Icons.Users className="w-3 h-3 text-slate-300" />
                                                 <span>{clientIds.length} <span className="text-[9px] opacity-70">Clients</span></span>
                                             </div>
                                             {activeQuotesCount > 0 && (
-                                                <>
-                                                    <div className="w-px h-2.5 bg-slate-200"></div>
-                                                    <div
-                                                        onClick={(e) => { e.stopPropagation(); setActiveQuotesView({ open: true, productId: p.id }); }}
-                                                        className="text-emerald-600 flex items-center gap-1.5 hover:text-emerald-700 transition-colors"
-                                                    >
-                                                        <Icons.Money className="w-3 h-3" />
-                                                        <span>{activeQuotesCount} Active <span className="text-[9px] opacity-70">Quotes</span></span>
-                                                    </div>
-                                                </>
+                                                <div
+                                                    onClick={(e) => { e.stopPropagation(); setActiveQuotesView({ open: true, productId: p.id }); }}
+                                                    className="text-emerald-600 flex items-center gap-1 hover:text-emerald-700 transition-colors"
+                                                >
+                                                    <Icons.Money className="w-3 h-3" />
+                                                    <span>{activeQuotesCount} <span className="text-[9px] opacity-70">Active</span></span>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setModal({ open: true, type: 'product', data: p, isEdit: true }) }}
-                                        className="p-1.5 text-slate-300 hover:text-blue-600 transition-all rounded hover:bg-white hover:border border-transparent hover:border-blue-100"
+                                        className="p-1 text-slate-300 hover:text-blue-600 transition-all rounded hover:bg-white"
                                     >
-                                        <Icons.Edit className="w-4 h-4" />
+                                        <Icons.Edit className="w-3.5 h-3.5" />
                                     </button>
-                                    <div className={`text-slate-300 transition-all duration-300 p-1 ${isExpanded ? 'rotate-180 text-blue-500 bg-white rounded-full shadow-sm' : ''}`}>
-                                        <Icons.ChevronDown className="w-4 h-4" />
+                                    <div className={`text-slate-300 transition-all duration-300 p-0.5 ${isExpanded ? 'rotate-180 text-blue-500 bg-white rounded-full shadow-sm' : ''}`}>
+                                        <Icons.ChevronDown className="w-3.5 h-3.5" />
                                     </div>
                                 </div>
                             </div>
                             {isExpanded && (
-                                <div className="border-t border-slate-100 bg-slate-50/40 p-3.5 animate-in fade-in slide-in-from-top-2 duration-300">
-                                    <div className="flex justify-between items-end mb-3 px-1">
-                                        <div>
-                                            <h4 className="text-[10px] font-bold uppercase text-slate-500 tracking-[0.2em] mb-0.5">Configuration Matrix</h4>
-                                            <div className="text-[9px] font-semibold text-slate-400">Manage SKUs, Pricing, and Formulations</div>
-                                        </div>
+                                <div className="border-t border-slate-100 bg-slate-50/40 px-3 py-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div className="flex justify-between items-center mb-2 px-1">
+                                        <h4 className="text-[10px] font-bold uppercase text-slate-500 tracking-[0.15em]">SKU Matrix</h4>
                                         <button
                                             onClick={() => setModal({ open: true, type: 'sku', data: { productId: p.id, productName: p.name } })}
-                                            className="px-3 py-1 bg-white border border-slate-300 rounded text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:border-blue-400 hover:text-blue-600 transition-all shadow-sm"
+                                            className="px-2 py-0.5 bg-white border border-slate-300 rounded text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:border-blue-400 hover:text-blue-600 transition-all shadow-sm"
                                         >
                                             + Add SKU
                                         </button>
@@ -245,11 +238,11 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
                                             <table className="w-full text-left border-collapse">
                                                 <thead className="bg-slate-50/80 border-b border-slate-200 uppercase">
                                                     <tr>
-                                                        <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest min-w-[180px]">Model Variant</th>
-                                                        <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest">Pack</th>
-                                                        <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest">Code</th>
-                                                        <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest">Market Benchmark</th>
-                                                        <th className="px-4 py-2 text-[10px] font-bold text-slate-400 tracking-widest text-right">Control</th>
+                                                        <th className="px-3 py-1.5 text-[10px] font-bold text-slate-400 tracking-widest min-w-[150px]">Variant</th>
+                                                        <th className="px-3 py-1.5 text-[10px] font-bold text-slate-400 tracking-widest">Pack</th>
+                                                        <th className="px-3 py-1.5 text-[10px] font-bold text-slate-400 tracking-widest">Code</th>
+                                                        <th className="px-3 py-1.5 text-[10px] font-bold text-slate-400 tracking-widest">Benchmark</th>
+                                                        <th className="px-3 py-1.5 text-[10px] font-bold text-slate-400 tracking-widest text-right">Control</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100">
@@ -257,35 +250,28 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
                                                         const latestBuy = quotesReceived.filter(q => q.skuId === s.id).sort((a, b) => b.createdAt - a.createdAt)[0];
                                                         return (
                                                             <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group/row">
-                                                                <td className="px-4 py-3">
-                                                                    <div className="flex flex-col gap-0.5">
-                                                                        <span className="font-bold text-slate-700 text-[13px]">{s.variant}</span>
-                                                                        {s.flavour && <span className="text-[9px] font-bold text-blue-500 uppercase tracking-tighter">{s.flavour}</span>}
-                                                                    </div>
+                                                                <td className="px-3 py-1.5">
+                                                                    <span className="font-semibold text-slate-700 text-[12px]">{s.variant}</span>
+                                                                    {s.flavour && <span className="text-[9px] font-bold text-blue-500 uppercase tracking-tighter ml-1.5">{s.flavour}</span>}
                                                                 </td>
-                                                                <td className="px-4 py-3">
-                                                                    <div className="flex flex-col gap-0.5">
-                                                                        <span className="text-[12px] font-semibold text-slate-600">{s.packSize} {s.unit}</span>
-                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{s.packType}</span>
-                                                                    </div>
+                                                                <td className="px-3 py-1.5">
+                                                                    <span className="text-[11px] font-medium text-slate-600">{s.packSize} {s.unit}</span>
+                                                                    <span className="text-[9px] font-bold text-slate-400 uppercase ml-1">{s.packType}</span>
                                                                 </td>
-                                                                <td className="px-4 py-3">
-                                                                    <code className="text-[11px] font-bold text-slate-400 font-mono bg-slate-50 px-1 py-0.5 border border-slate-100 rounded">{s.name}</code>
+                                                                <td className="px-3 py-1.5">
+                                                                    <code className="text-[10px] font-bold text-slate-400 font-mono bg-slate-50 px-1 py-px border border-slate-100 rounded">{s.name}</code>
                                                                 </td>
-                                                                <td className="px-4 py-3">
+                                                                <td className="px-3 py-1.5">
                                                                     {latestBuy ? (
-                                                                        <div className="space-y-0.5">
-                                                                            <div className="font-bold text-slate-800 text-[13px]">{formatMoney(latestBuy.price, latestBuy.currency)}</div>
-                                                                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate max-w-[120px]">Latest from <span className="text-blue-500">{vendors.find(v => v.id === latestBuy.vendorId)?.companyName}</span></div>
-                                                                        </div>
-                                                                    ) : <span className="text-[10px] font-bold text-slate-200 uppercase tracking-widest italic">— No History —</span>}
+                                                                        <span className="text-[12px]"><span className="font-bold text-slate-800">{formatMoney(latestBuy.price, latestBuy.currency)}</span> <span className="text-[9px] text-slate-400">from {vendors.find(v => v.id === latestBuy.vendorId)?.companyName}</span></span>
+                                                                    ) : <span className="text-[10px] text-slate-200">—</span>}
                                                                 </td>
-                                                                <td className="px-4 py-3 text-right">
-                                                                    <div className="flex justify-end gap-1.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
-                                                                        <button onClick={(e) => generateSkuPdf(e, s)} className="p-2 bg-white border border-slate-200 rounded text-green-500 hover:border-green-300 hover:bg-green-50 transition-all shadow-sm" title="Technical Datasheet"><Icons.File className="w-3.5 h-3.5" /></button>
-                                                                        <button onClick={() => onNavigateToFormulation(s.id)} className="p-2 bg-white border border-slate-200 rounded text-purple-500 hover:border-purple-300 hover:bg-purple-50 transition-all shadow-sm" title="Formulation / BOM"><Icons.List className="w-3.5 h-3.5" /></button>
-                                                                        <button onClick={() => setModal({ open: true, type: 'sku', data: s, isEdit: true })} className="p-2 bg-white border border-slate-200 rounded text-blue-500 hover:border-blue-300 hover:bg-blue-50 transition-all shadow-sm" title="Settings"><Icons.Edit className="w-3.5 h-3.5" /></button>
-                                                                        <button onClick={() => { if (confirm('Delete SKU configuration?')) actions.del('skus', s.id) }} className="p-2 bg-white border border-slate-200 rounded text-red-400 hover:border-red-300 hover:bg-red-50 transition-all shadow-sm" title="Remove"><Icons.X className="w-3.5 h-3.5" /></button>
+                                                                <td className="px-3 py-1.5 text-right">
+                                                                    <div className="flex justify-end gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                                                                        <button onClick={(e) => generateSkuPdf(e, s)} className="p-1 bg-white border border-slate-200 rounded text-green-500 hover:border-green-300 hover:bg-green-50 transition-all" title="Technical Datasheet"><Icons.File className="w-3 h-3" /></button>
+                                                                        <button onClick={() => onNavigateToFormulation(s.id)} className="p-1 bg-white border border-slate-200 rounded text-purple-500 hover:border-purple-300 hover:bg-purple-50 transition-all" title="Formulation / BOM"><Icons.List className="w-3 h-3" /></button>
+                                                                        <button onClick={() => setModal({ open: true, type: 'sku', data: s, isEdit: true })} className="p-1 bg-white border border-slate-200 rounded text-blue-500 hover:border-blue-300 hover:bg-blue-50 transition-all" title="Settings"><Icons.Edit className="w-3 h-3" /></button>
+                                                                        <button onClick={() => { if (confirm('Delete SKU configuration?')) actions.del('skus', s.id) }} className="p-1 bg-white border border-slate-200 rounded text-red-400 hover:border-red-300 hover:bg-red-50 transition-all" title="Remove"><Icons.X className="w-3 h-3" /></button>
                                                                     </div>
                                                                 </td>
                                                             </tr>

@@ -18,7 +18,7 @@ export const FilterHeader = ({ label, sortKey, currentSort, onSort, filterType, 
     };
 
     return (
-        <div className="flex flex-col gap-1 w-full bg-white p-1.5 border border-slate-100/50">
+        <div className="flex flex-col gap-0.5 w-full bg-white p-1 border border-slate-100/50">
             <div
                 className="flex items-center justify-between cursor-pointer group/label select-none px-0.5"
                 onClick={() => onSort(sortKey)}
@@ -31,7 +31,7 @@ export const FilterHeader = ({ label, sortKey, currentSort, onSort, filterType, 
 
             {filterType === 'text' && (
                 <input
-                    className="w-full px-2 py-1 text-[11px] border border-slate-200 rounded-sm bg-slate-50/30 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-300 font-medium text-slate-600"
+                    className="w-full px-1.5 py-0.5 text-[10px] border border-slate-200 rounded-sm bg-slate-50/30 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-300 font-medium text-slate-600"
                     placeholder={`Filter...`}
                     value={filterValue || ''}
                     onChange={e => onFilter(e.target.value)}
@@ -42,7 +42,7 @@ export const FilterHeader = ({ label, sortKey, currentSort, onSort, filterType, 
             {filterType === 'multi-select' && (
                 <div className="relative" ref={ref}>
                     <div
-                        className={`w-full px-2 py-1 text-[11px] border rounded-sm cursor-pointer flex justify-between items-center transition-all ${(!filterValue || filterValue.length === 0) ? 'bg-slate-50/30 border-slate-200 text-slate-400 hover:bg-white' : 'bg-blue-50/30 border-blue-200 text-blue-600 font-bold'}`}
+                        className={`w-full px-1.5 py-0.5 text-[10px] border rounded-sm cursor-pointer flex justify-between items-center transition-all ${(!filterValue || filterValue.length === 0) ? 'bg-slate-50/30 border-slate-200 text-slate-400 hover:bg-white' : 'bg-blue-50/30 border-blue-200 text-blue-600 font-bold'}`}
                         onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
                     >
                         <span className="truncate">
@@ -80,7 +80,7 @@ export const FilterHeader = ({ label, sortKey, currentSort, onSort, filterType, 
             {filterType === 'boolean' && (
                 <div className="relative">
                     <select
-                        className="w-full px-2 py-1 text-[11px] border border-slate-200 rounded-sm bg-slate-50/30 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-100 outline-none transition-all appearance-none cursor-pointer font-medium text-slate-600"
+                        className="w-full px-1.5 py-0.5 text-[10px] border border-slate-200 rounded-sm bg-slate-50/30 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-100 outline-none transition-all appearance-none cursor-pointer font-medium text-slate-600"
                         value={filterValue || 'All'}
                         onChange={e => onFilter(e.target.value)}
                         onClick={e => e.stopPropagation()}

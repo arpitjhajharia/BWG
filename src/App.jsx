@@ -14,6 +14,7 @@ import { AdminPanel } from './components/Modules/AdminPanel';
 import { ORSMaster } from './components/Modules/ORSMaster';
 import { RFQMaster } from './components/Modules/RFQMaster';
 import { Inventory } from './components/modules/Inventory';
+import { HelpCenter } from './components/modules/HelpCenter';
 import { UserGuideOverlay } from './components/ui/UserGuideOverlay';
 
 // Modals
@@ -47,6 +48,7 @@ function App() {
     { id: 'quotes', label: 'Quotes', icon: Icons.Money },
     { id: 'tasks', label: 'Tasks', icon: Icons.Task },
     { id: 'inventory', label: 'Inventory', icon: Icons.Box },
+    { id: 'help', label: 'Help', icon: Icons.Help },
   ];
 
   // Admin item removed from sidebar - now accessed via settings icon
@@ -163,6 +165,7 @@ function App() {
             {activeTab === 'quotes' && <QuotesTab data={data} actions={actions} setModal={setModal} />}
             {activeTab === 'tasks' && <TaskBoard data={data} actions={actions} setModal={setModal} />}
             {activeTab === 'inventory' && <Inventory data={data} actions={actions} setModal={setModal} />}
+            {activeTab === 'help' && <HelpCenter />}
             {activeTab === 'admin' && <AdminPanel currentUser={currentUser} data={data} actions={actions} setModal={setModal} />}
           </div>
         </main>

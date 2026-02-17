@@ -155,14 +155,14 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
     };
 
     return (
-        <div className="flex flex-col h-full animate-fade-in space-y-4">
-            <div className="flex justify-between items-center shrink-0 border-b border-slate-200 pb-3">
+        <div className="flex flex-col h-full animate-fade-in space-y-2">
+            <div className="flex justify-between items-center shrink-0 border-b border-slate-200 pb-2">
                 <div className="flex items-center gap-2">
-                    <div className="p-2 bg-slate-100 rounded border border-slate-200">
+                    <div className="p-1.5 bg-slate-100 rounded border border-slate-200">
                         {isVendor ? <Icons.Vendor className="w-5 h-5 text-slate-600" /> : <Icons.Client className="w-5 h-5 text-slate-600" />}
                     </div>
                     <div>
-                        <h2 className="font-bold text-lg text-slate-800 leading-tight">{isVendor ? 'Vendor Master' : 'Client Registry'}</h2>
+                        <h2 className="font-bold text-base text-slate-800 leading-tight">{isVendor ? 'Vendor Master' : 'Client Registry'}</h2>
                         <div className="flex items-center gap-1.5 mt-0.5">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredData.length} Entities Indexed</span>
                         </div>
@@ -194,40 +194,40 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
                             </div>
                         )}
                     </div>
-                    <Button icon={Icons.Plus} onClick={() => setModal({ open: true, type })} variant="primary" className="shadow-sm uppercase text-[11px] tracking-widest px-5">Add New</Button>
+                    <Button icon={Icons.Plus} onClick={() => setModal({ open: true, type })} variant="primary" className="shadow-sm uppercase text-[11px] tracking-widest px-5">New</Button>
                 </div>
             </div>
 
             <div className="flex-1 overflow-hidden bg-white border border-slate-200 relative flex flex-col shadow-sm">
                 {viewMode === 'list' ? (
                     <div className="absolute inset-0 overflow-auto scroller">
-                        <table className="w-full text-left border-collapse table-fixed">
+                        <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="divide-x divide-slate-100 border-b border-slate-200">
-                                    <th className="w-72 bg-slate-50/50 p-0">
+                                    <th className="min-w-[180px] bg-slate-50/50 p-0">
                                         <FilterHeader label="Company Entity" sortKey="companyName" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.name} onFilter={v => setColFilters(p => ({ ...p, name: v }))} />
                                     </th>
                                     {visibleProps.status && (
-                                        <th className="w-32 bg-slate-50/50 p-0">
+                                        <th className="bg-slate-50/50 p-0">
                                             <FilterHeader label="Status" sortKey="status" currentSort={sort} onSort={handleSort} filterType="multi-select" filterValue={colFilters.status} onFilter={v => setColFilters(p => ({ ...p, status: v }))} options={statusOptions} />
                                         </th>
                                     )}
                                     {visibleProps.products && (
-                                        <th className="w-56 bg-slate-50/50 p-0">
+                                        <th className="bg-slate-50/50 p-0">
                                             <FilterHeader label="Portfolio" sortKey="rollupProducts" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.products} onFilter={v => setColFilters(p => ({ ...p, products: v }))} />
                                         </th>
                                     )}
                                     {visibleProps.rollup && (
-                                        <th className="w-64 bg-slate-50/50 p-0">
+                                        <th className="bg-slate-50/50 p-0">
                                             <FilterHeader label="Engagement" sortKey="rollupPendingTasks" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.nextAction} onFilter={v => setColFilters(p => ({ ...p, nextAction: v }))} />
                                         </th>
                                     )}
                                     {visibleProps.leadDate && (
-                                        <th className="w-32 bg-slate-50/50 p-0">
+                                        <th className="bg-slate-50/50 p-0">
                                             <FilterHeader label={isVendor ? 'Onboarded' : 'Lead Date'} sortKey={isVendor ? 'createdAt' : 'leadDate'} currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.date} onFilter={v => setColFilters(p => ({ ...p, date: v }))} />
                                         </th>
                                     )}
-                                    <th className="w-12 bg-slate-50/50"></th>
+                                    <th className="w-8 bg-slate-50/50"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -237,60 +237,54 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
                                         onClick={() => setDetailView({ open: true, type, data: item })}
                                         className="hover:bg-slate-50/80 cursor-pointer group transition-colors divide-x divide-slate-50"
                                     >
-                                        <td className="px-4 py-2.5">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-8 h-8 rounded border flex items-center justify-center text-[10px] font-bold uppercase ${isVendor ? 'bg-purple-50 border-purple-100 text-purple-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+                                        <td className="px-3 py-1.5">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-6 h-6 rounded border flex items-center justify-center text-[9px] font-bold uppercase shrink-0 ${isVendor ? 'bg-purple-50 border-purple-100 text-purple-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
                                                     {item.companyName.charAt(0)}
                                                 </div>
-                                                <div className="flex flex-col min-w-0">
-                                                    <span className="font-bold text-slate-700 text-[13px] truncate">{item.companyName}</span>
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter truncate">{item.website?.replace(/^https?:\/\//, '') || 'INTERNAL RECORD'}</span>
-                                                </div>
+                                                <span className="font-semibold text-slate-700 text-[12px] truncate">{item.companyName}</span>
+                                                <span className="text-[10px] text-slate-400 truncate hidden sm:inline">{item.website?.replace(/^https?:\/\//, '') || ''}</span>
                                             </div>
                                         </td>
                                         {visibleProps.status && (
-                                            <td className="px-4 py-2.5">
+                                            <td className="px-3 py-1.5">
                                                 {isVendor ? <StatusBadge item={item} /> : <StatusSelect item={item} />}
                                             </td>
                                         )}
                                         {visibleProps.products && (
-                                            <td className="px-4 py-2.5">
-                                                <div className="flex flex-wrap gap-1">
+                                            <td className="px-3 py-1.5">
+                                                <div className="flex flex-wrap gap-0.5">
                                                     {item.rollupProducts.slice(0, 2).map((p, i) => (
-                                                        <span key={i} className="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-500 rounded border border-slate-200 font-bold uppercase tracking-tighter">
+                                                        <span key={i} className="text-[9px] px-1 py-px bg-slate-50 text-slate-500 rounded border border-slate-200 font-semibold uppercase tracking-tighter">
                                                             {p}
                                                         </span>
                                                     ))}
                                                     {item.rollupProducts.length > 2 && (
-                                                        <span className="text-[9px] font-bold text-slate-300 uppercase px-1">+{item.rollupProducts.length - 2}</span>
+                                                        <span className="text-[9px] font-bold text-slate-300 uppercase">+{item.rollupProducts.length - 2}</span>
                                                     )}
                                                     {item.rollupProducts.length === 0 && <span className="text-slate-200 text-[10px]">—</span>}
                                                 </div>
                                             </td>
                                         )}
                                         {visibleProps.rollup && (
-                                            <td className="px-4 py-2.5">
+                                            <td className="px-3 py-1.5">
                                                 {item.rollupPendingTasks.length > 0 ? (
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <div className={`w-1.5 h-1.5 shrink-0 rounded-full ${item.rollupPendingTasks[0].priority === 'High' ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.4)]' : 'bg-blue-400'}`}></div>
-                                                            <span className="text-[11px] font-bold text-slate-600 truncate">{item.rollupPendingTasks[0].title}</span>
-                                                        </div>
-                                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-3">
-                                                            Due {formatDate(item.rollupPendingTasks[0].dueDate)}
-                                                        </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className={`w-1.5 h-1.5 shrink-0 rounded-full ${item.rollupPendingTasks[0].priority === 'High' ? 'bg-red-500' : 'bg-blue-400'}`}></div>
+                                                        <span className="text-[11px] font-semibold text-slate-600 truncate">{item.rollupPendingTasks[0].title}</span>
+                                                        <span className="text-[9px] text-slate-400 uppercase tracking-tight whitespace-nowrap">Due {formatDate(item.rollupPendingTasks[0].dueDate)}</span>
                                                     </div>
                                                 ) : <span className="text-slate-200 text-[10px]">—</span>}
                                             </td>
                                         )}
                                         {visibleProps.leadDate && (
-                                            <td className="px-4 py-2.5">
-                                                <span className="text-[11px] font-bold text-slate-500">
+                                            <td className="px-3 py-1.5">
+                                                <span className="text-[11px] font-medium text-slate-500 whitespace-nowrap">
                                                     {item.leadDate ? formatDate(item.leadDate) : (item.createdAt ? formatDate(item.createdAt) : '-')}
                                                 </span>
                                             </td>
                                         )}
-                                        <td className="px-2 py-2.5 text-right">
+                                        <td className="px-1 py-1.5 text-right">
                                             <button className="p-1 text-slate-300 hover:text-blue-500 transition-colors">
                                                 <Icons.ChevronRight className="w-4 h-4" />
                                             </button>
