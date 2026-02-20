@@ -9,16 +9,29 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
     const isVendor = type === 'vendor';
     const listData = isVendor ? vendors : clients;
     const statusOptions = (isVendor ? settings?.vendorStatuses : settings?.leadStatuses) || [];
+    const statusGroupMap = (!isVendor && settings?.leadStatusGroups) || {};
+
+    // Build grouped options for FilterHeader (only for clients)
+    const statusOptionGroups = useMemo(() => {
+        if (isVendor || !statusGroupMap || Object.keys(statusGroupMap).length === 0) return null;
+        const groups = { 'In-progress': [], 'Complete': [] };
+        statusOptions.forEach(s => {
+            const g = statusGroupMap[s] || 'In-progress';
+            if (groups[g]) groups[g].push(s);
+            else groups[g] = [s];
+        });
+        return groups;
+    }, [statusOptions, statusGroupMap, isVendor]);
 
     const [viewMode, setViewMode] = useState('list');
     const [propertiesOpen, setPropertiesOpen] = useState(false);
     const [visibleProps, setVisibleProps] = useState({
         products: true,
         status: true,
+        category: true,
         rollup: true,
         leadDate: true,
         source: type === 'client',
-        hot: type === 'client',
         website: false
     });
 
@@ -26,10 +39,10 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
     const [colFilters, setColFilters] = useState({
         name: '',
         status: [],
+        category: [],
         source: [],
         products: '',
         website: '',
-        hot: 'All',
         nextAction: '',
         date: ''
     });
@@ -75,11 +88,12 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
 
             if (colFilters.website && (!item.website || !item.website.toLowerCase().includes(colFilters.website.toLowerCase()))) return false;
 
-            if (colFilters.hot !== 'All') {
-                const isHot = item.status === 'Hot Lead';
-                if (colFilters.hot === 'Yes' && !isHot) return false;
-                if (colFilters.hot === 'No' && isHot) return false;
+            if (colFilters.category.length > 0) {
+                const itemCats = item.categories || [];
+                if (!colFilters.category.some(c => itemCats.includes(c))) return false;
             }
+
+
 
             if (colFilters.nextAction) {
                 const actionText = item.rollupPendingTasks.map(t => t.title).join(' ').toLowerCase();
@@ -145,7 +159,15 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
                     onClick={(e) => e.stopPropagation()}
                 >
                     <option value="">Status...</option>
-                    {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                    {statusOptionGroups ? (
+                        Object.entries(statusOptionGroups).map(([group, opts]) => (
+                            <optgroup key={group} label={group}>
+                                {opts.map(s => <option key={s} value={s}>{s}</option>)}
+                            </optgroup>
+                        ))
+                    ) : (
+                        statusOptions.map(s => <option key={s} value={s}>{s}</option>)
+                    )}
                 </select>
                 <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300">
                     <Icons.ChevronDown className="w-2.5 h-2.5" />
@@ -209,9 +231,20 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
                                     </th>
                                     {visibleProps.status && (
                                         <th className="bg-slate-50/50 p-0">
-                                            <FilterHeader label="Status" sortKey="status" currentSort={sort} onSort={handleSort} filterType="multi-select" filterValue={colFilters.status} onFilter={v => setColFilters(p => ({ ...p, status: v }))} options={statusOptions} />
+                                            <FilterHeader label="Status" sortKey="status" currentSort={sort} onSort={handleSort} filterType="multi-select" filterValue={colFilters.status} onFilter={v => setColFilters(p => ({ ...p, status: v }))} options={statusOptions} optionGroups={statusOptionGroups} />
                                         </th>
                                     )}
+                                    {visibleProps.category && (
+                                        <th className="bg-slate-50/50 p-0">
+                                            <FilterHeader label="Category" sortKey="categories" currentSort={sort} onSort={handleSort} filterType="multi-select" filterValue={colFilters.category} onFilter={v => setColFilters(p => ({ ...p, category: v }))} options={(settings?.formats || [])} />
+                                        </th>
+                                    )}
+                                    {visibleProps.source && (
+                                        <th className="bg-slate-50/50 p-0">
+                                            <FilterHeader label="Lead Source" sortKey="leadSource" currentSort={sort} onSort={handleSort} filterType="multi-select" filterValue={colFilters.source} onFilter={v => setColFilters(p => ({ ...p, source: v }))} options={(settings?.leadSources || [])} />
+                                        </th>
+                                    )}
+
                                     {visibleProps.products && (
                                         <th className="bg-slate-50/50 p-0">
                                             <FilterHeader label="Portfolio" sortKey="rollupProducts" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.products} onFilter={v => setColFilters(p => ({ ...p, products: v }))} />
@@ -243,7 +276,6 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
                                                     {item.companyName.charAt(0)}
                                                 </div>
                                                 <span className="font-semibold text-slate-700 text-[12px] truncate">{item.companyName}</span>
-                                                <span className="text-[10px] text-slate-400 truncate hidden sm:inline">{item.website?.replace(/^https?:\/\//, '') || ''}</span>
                                             </div>
                                         </td>
                                         {visibleProps.status && (
@@ -251,6 +283,22 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
                                                 {isVendor ? <StatusBadge item={item} /> : <StatusSelect item={item} />}
                                             </td>
                                         )}
+                                        {visibleProps.category && (
+                                            <td className="px-3 py-1.5">
+                                                <div className="flex flex-wrap gap-0.5">
+                                                    {(item.categories || []).map((c, i) => (
+                                                        <span key={i} className="text-[9px] px-1 py-px bg-violet-50 text-violet-600 rounded border border-violet-200 font-semibold uppercase tracking-tighter">{c}</span>
+                                                    ))}
+                                                    {(!item.categories || item.categories.length === 0) && <span className="text-slate-200 text-[10px]">—</span>}
+                                                </div>
+                                            </td>
+                                        )}
+                                        {visibleProps.source && (
+                                            <td className="px-3 py-1.5">
+                                                <span className="text-[11px] font-medium text-slate-500">{item.leadSource || '—'}</span>
+                                            </td>
+                                        )}
+
                                         {visibleProps.products && (
                                             <td className="px-3 py-1.5">
                                                 <div className="flex flex-wrap gap-0.5">
@@ -306,59 +354,71 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
                     </div>
                 ) : (
                     <div className="absolute inset-0 overflow-x-auto overflow-y-hidden p-4 flex gap-4 bg-slate-50/50">
-                        {statusOptions.map(status => {
-                            const itemsInStatus = filteredData.filter(i => (i.status || 'Active') === status);
-                            return (
-                                <div key={status} className="w-72 flex-shrink-0 flex flex-col h-full bg-slate-100/30 rounded-lg border border-slate-200 p-2">
-                                    <div className="flex justify-between items-center mb-3 px-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-500">{status}</span>
-                                            <span className="bg-white border border-slate-200 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">{itemsInStatus.length}</span>
+                        {(statusOptionGroups ? Object.entries(statusOptionGroups) : [['', statusOptions]]).map(([groupName, groupStatuses]) => (
+                            <React.Fragment key={groupName}>
+                                {groupName && (
+                                    <div className="flex flex-col justify-start pt-1">
+                                        <div className={`writing-mode-vertical text-[9px] font-bold uppercase tracking-[0.2em] py-3 px-1 rounded ${groupName === 'In-progress' ? 'text-amber-500 bg-amber-50/50' : 'text-emerald-500 bg-emerald-50/50'}`}
+                                            style={{ writingMode: 'vertical-lr', textOrientation: 'mixed' }}>
+                                            {groupName}
                                         </div>
                                     </div>
-                                    <div className="flex-1 overflow-y-auto scroller space-y-2.5 pr-1">
-                                        {itemsInStatus.map(item => (
-                                            <div
-                                                key={item.id}
-                                                onClick={() => setDetailView({ open: true, type, data: item })}
-                                                className="bg-white p-3 border border-slate-200 shadow-sm hover:border-blue-400 cursor-pointer group transition-all hover:shadow-md"
-                                            >
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <h4 className="font-bold text-slate-700 text-[13px] line-clamp-2 leading-snug tracking-tight">{item.companyName}</h4>
-                                                    <button onClick={(e) => { e.stopPropagation(); setModal({ open: true, type, data: item, isEdit: true }) }} className="p-1 text-slate-300 hover:text-blue-500 transition-colors"><Icons.Edit className="w-3 h-3" /></button>
+                                )}
+                                {groupStatuses.map(status => {
+                                    const itemsInStatus = filteredData.filter(i => (i.status || 'Active') === status);
+                                    return (
+                                        <div key={status} className="w-72 flex-shrink-0 flex flex-col h-full bg-slate-100/30 rounded-lg border border-slate-200 p-2">
+                                            <div className="flex justify-between items-center mb-3 px-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-500">{status}</span>
+                                                    <span className="bg-white border border-slate-200 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">{itemsInStatus.length}</span>
                                                 </div>
-
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <div className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold border uppercase ${isVendor ? 'bg-purple-50 border-purple-100 text-purple-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
-                                                        {item.companyName.charAt(0)}
-                                                    </div>
-                                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">{item.city || 'Location N/A'}</div>
-                                                </div>
-
-                                                {visibleProps.products && item.rollupProducts.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1 mb-3">
-                                                        {item.rollupProducts.slice(0, 2).map((p, i) => <span key={i} className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-slate-50 text-slate-500 border border-slate-100 rounded-sm">{p}</span>)}
-                                                        {item.rollupProducts.length > 2 && <span className="text-[9px] font-bold text-slate-300 px-1">+{item.rollupProducts.length - 2}</span>}
-                                                    </div>
-                                                )}
-
-                                                {visibleProps.rollup && item.rollupPendingTasks.length > 0 && (
-                                                    <div className="mt-2 pt-2 border-t border-slate-50">
-                                                        <div className="flex items-start gap-1.5">
-                                                            <div className={`w-1.5 h-1.5 mt-1 shrink-0 rounded-full ${item.rollupPendingTasks[0].priority === 'High' ? 'bg-red-500' : 'bg-blue-400'}`}></div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="text-[10px] font-bold text-slate-600 truncate leading-tight">{item.rollupPendingTasks[0].title}</div>
-                                                                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">Due {formatDate(item.rollupPendingTasks[0].dueDate)}</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                            <div className="flex-1 overflow-y-auto scroller space-y-2.5 pr-1">
+                                                {itemsInStatus.map(item => (
+                                                    <div
+                                                        key={item.id}
+                                                        onClick={() => setDetailView({ open: true, type, data: item })}
+                                                        className="bg-white p-3 border border-slate-200 shadow-sm hover:border-blue-400 cursor-pointer group transition-all hover:shadow-md"
+                                                    >
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <h4 className="font-bold text-slate-700 text-[13px] line-clamp-2 leading-snug tracking-tight">{item.companyName}</h4>
+                                                            <button onClick={(e) => { e.stopPropagation(); setModal({ open: true, type, data: item, isEdit: true }) }} className="p-1 text-slate-300 hover:text-blue-500 transition-colors"><Icons.Edit className="w-3 h-3" /></button>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2 mb-3">
+                                                            <div className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold border uppercase ${isVendor ? 'bg-purple-50 border-purple-100 text-purple-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+                                                                {item.companyName.charAt(0)}
+                                                            </div>
+                                                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">{item.city || 'Location N/A'}</div>
+                                                        </div>
+
+                                                        {visibleProps.products && item.rollupProducts.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 mb-3">
+                                                                {item.rollupProducts.slice(0, 2).map((p, i) => <span key={i} className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-slate-50 text-slate-500 border border-slate-100 rounded-sm">{p}</span>)}
+                                                                {item.rollupProducts.length > 2 && <span className="text-[9px] font-bold text-slate-300 px-1">+{item.rollupProducts.length - 2}</span>}
+                                                            </div>
+                                                        )}
+
+                                                        {visibleProps.rollup && item.rollupPendingTasks.length > 0 && (
+                                                            <div className="mt-2 pt-2 border-t border-slate-50">
+                                                                <div className="flex items-start gap-1.5">
+                                                                    <div className={`w-1.5 h-1.5 mt-1 shrink-0 rounded-full ${item.rollupPendingTasks[0].priority === 'High' ? 'bg-red-500' : 'bg-blue-400'}`}></div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="text-[10px] font-bold text-slate-600 truncate leading-tight">{item.rollupPendingTasks[0].title}</div>
+                                                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">Due {formatDate(item.rollupPendingTasks[0].dueDate)}</div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </React.Fragment>
+                        ))}
                     </div>
                 )}
             </div>

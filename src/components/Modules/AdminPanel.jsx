@@ -50,6 +50,92 @@ const SettingsCard = ({ title, settingKey, items, actions }) => {
     );
 };
 
+const GROUPS = ['In-progress', 'Complete'];
+
+const LeadStatusGroupCard = ({ statuses, groups, actions }) => {
+    const [newItem, setNewItem] = useState('');
+
+    const save = (newStatuses, newGroups) => {
+        actions.updateSetting('leadStatuses', newStatuses);
+        actions.updateSetting('leadStatusGroups', newGroups);
+    };
+
+    const add = () => {
+        if (newItem && !statuses.includes(newItem)) {
+            save([...statuses, newItem], { ...groups, [newItem]: 'In-progress' });
+            setNewItem('');
+        }
+    };
+
+    const remove = (item) => {
+        if (confirm(`Remove "${item}"?`)) {
+            const newGroups = { ...groups };
+            delete newGroups[item];
+            save(statuses.filter(s => s !== item), newGroups);
+        }
+    };
+
+    const toggleGroup = (item) => {
+        const current = groups[item] || 'In-progress';
+        save(statuses, { ...groups, [item]: current === 'In-progress' ? 'Complete' : 'In-progress' });
+    };
+
+    return (
+        <div className="bg-white border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+            <div className="bg-slate-50 px-3 py-2 border-b border-slate-200">
+                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Lead Statuses</h3>
+            </div>
+            <div className="p-3 space-y-3">
+                <div className="flex gap-1.5">
+                    <input
+                        className="border border-slate-300 rounded text-[13px] p-1.5 flex-1 focus:ring-1 focus:ring-blue-500 outline-none"
+                        placeholder="Add status..."
+                        value={newItem}
+                        onChange={e => setNewItem(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && add()}
+                    />
+                    <button
+                        onClick={add}
+                        className="px-3 bg-white border border-slate-300 rounded text-slate-600 hover:bg-slate-50 font-bold"
+                    >+</button>
+                </div>
+                <div className="max-h-60 overflow-y-auto scroller border border-slate-100 rounded">
+                    {GROUPS.map(group => {
+                        const items = statuses.filter(s => (groups[s] || 'In-progress') === group);
+                        return (
+                            <div key={group}>
+                                <div className={`px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest border-b border-slate-100 sticky top-0 z-10 ${group === 'In-progress' ? 'bg-amber-50/80 text-amber-600' : 'bg-emerald-50/80 text-emerald-600'}`}>
+                                    {group} <span className="text-slate-400 font-normal ml-1">({items.length})</span>
+                                </div>
+                                {items.map((item, i) => (
+                                    <div key={i} className="flex justify-between items-center text-[12px] px-2 py-1.5 hover:bg-slate-50 transition-colors group border-b border-slate-50">
+                                        <span className="font-medium text-slate-600 truncate flex-1">{item}</span>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                onClick={() => toggleGroup(item)}
+                                                title={`Move to ${group === 'In-progress' ? 'Complete' : 'In-progress'}`}
+                                                className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border transition-colors ${group === 'In-progress' ? 'text-amber-600 bg-amber-50 border-amber-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200' : 'text-emerald-600 bg-emerald-50 border-emerald-200 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200'}`}
+                                            >
+                                                {group === 'In-progress' ? '→ Done' : '→ WIP'}
+                                            </button>
+                                            <button onClick={() => remove(item)} className="text-slate-300 hover:text-red-500">
+                                                <Icons.X className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {items.length === 0 && (
+                                    <div className="p-2 text-center text-[10px] text-slate-300 italic">No statuses</div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const AdminPanel = ({ currentUser, data, actions, setModal }) => {
     const [subTab, setSubTab] = useState('users');
     const { userProfiles, settings } = data;
@@ -157,7 +243,7 @@ export const AdminPanel = ({ currentUser, data, actions, setModal }) => {
                         <SettingsCard title="SKU Units" settingKey="units" items={settings.units} actions={actions} />
                         <SettingsCard title="Pack Types" settingKey="packTypes" items={settings.packTypes} actions={actions} />
                         <SettingsCard title="Lead Sources" settingKey="leadSources" items={settings.leadSources} actions={actions} />
-                        <SettingsCard title="Lead Statuses" settingKey="leadStatuses" items={settings.leadStatuses} actions={actions} />
+                        <LeadStatusGroupCard statuses={settings.leadStatuses || []} groups={settings.leadStatusGroups || {}} actions={actions} />
                         <SettingsCard title="Task Groups" settingKey="taskGroups" items={settings.taskGroups} actions={actions} />
                         <SettingsCard title="Vendor Status" settingKey="vendorStatuses" items={settings.vendorStatuses} actions={actions} />
                     </div>

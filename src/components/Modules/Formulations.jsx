@@ -24,8 +24,16 @@ export const Formulations = ({ data, actions, setModal, targetFormulationId }) =
         }
     }, [targetFormulationId]);
 
+    const formatNum = (val) => {
+        if (val === '' || val === null || val === undefined) return '';
+        const num = parseFloat(val);
+        if (isNaN(num)) return val;
+        return num.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    };
+
     const calculateTotal = (ingredients, field) => {
-        return ingredients.reduce((sum, item) => sum + (parseFloat(item[field]) || 0), 0).toFixed(2);
+        const total = ingredients.reduce((sum, item) => sum + (parseFloat(item[field]) || 0), 0);
+        return formatNum(total.toFixed(2));
     };
 
     return (
@@ -78,6 +86,7 @@ export const Formulations = ({ data, actions, setModal, targetFormulationId }) =
                                 <div className="flex items-center gap-1.5 flex-shrink-0">
                                     <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={(e) => { e.stopPropagation(); setModal({ open: true, type: 'formulation', data: f, isEdit: true }) }} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600 transition-colors" title="Edit"><Icons.Edit className="w-3 h-3" /></button>
+                                        <button onClick={(e) => { e.stopPropagation(); setModal({ open: true, type: 'formulation', data: { ...f, skuId: '', packaging: [], id: undefined, sourceProductId: s?.productId, ingredients: JSON.parse(JSON.stringify(f.ingredients || [])) }, isDuplicate: true }) }} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-purple-600 transition-colors" title="Duplicate"><Icons.Copy className="w-3 h-3" /></button>
                                         <button onClick={(e) => { e.stopPropagation(); actions.del('formulations', f.id) }} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-600 transition-colors" title="Delete"><Icons.Trash className="w-3 h-3" /></button>
                                     </div>
                                     <div className={`text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-blue-500' : ''}`}>
@@ -115,9 +124,9 @@ export const Formulations = ({ data, actions, setModal, targetFormulationId }) =
                                                                         {ing.type || 'Active'}
                                                                     </span>
                                                                 </td>
-                                                                <td className="px-2 py-1 text-right text-slate-600 font-mono">{ing.per100g}%</td>
-                                                                <td className="px-2 py-1 text-right text-slate-600 font-mono">{ing.perServing}</td>
-                                                                <td className="px-2 py-1 text-right font-bold text-slate-700 bg-blue-50/20 font-mono">{ing.perSku}</td>
+                                                                <td className="px-2 py-1 text-right text-slate-600">{ing.per100g}%</td>
+                                                                <td className="px-2 py-1 text-right text-slate-600">{formatNum(ing.perServing)}</td>
+                                                                <td className="px-2 py-1 text-right font-bold text-slate-700 bg-blue-50/20">{formatNum(ing.perSku)}</td>
                                                             </tr>
                                                         ))}
                                                     </tbody>
@@ -151,7 +160,7 @@ export const Formulations = ({ data, actions, setModal, targetFormulationId }) =
                                                     {(f.packaging || []).map((pack, idx) => (
                                                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                                                             <td className="px-2 py-1 font-medium text-slate-700">{pack.item}</td>
-                                                            <td className="px-2 py-1 text-right text-slate-600 font-mono">{pack.qty}</td>
+                                                            <td className="px-2 py-1 text-right text-slate-600">{pack.qty}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>

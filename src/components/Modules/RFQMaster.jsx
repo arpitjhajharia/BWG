@@ -179,13 +179,13 @@ export const RFQMaster = ({ data, actions, setModal }) => {
                 <table className="w-full text-left border-collapse">
                     <thead className="sticky top-0 bg-slate-50 text-xs font-semibold text-slate-500 border-b border-slate-200 z-10 shadow-sm">
                         <tr>
-                            <th className="px-3 py-1.5 w-24">Date</th>
-                            <th className="px-3 py-1.5 w-36">Vendor</th>
-                            <th className="px-3 py-1.5 w-20">Type</th>
-                            <th className="px-3 py-1.5">Item Details</th>
-                            <th className="px-3 py-1.5 w-28">Qty / Target</th>
-                            <th className="px-3 py-1.5 w-28">Country</th>
-                            <th className="px-3 py-1.5 text-right w-20">Actions</th>
+                            <th className="px-2 py-1.5 w-20">Date</th>
+                            <th className="px-2 py-1.5 w-28">Vendor</th>
+                            <th className="px-2 py-1.5 w-16">Type</th>
+                            <th className="px-2 py-1.5">Item Details</th>
+                            <th className="px-2 py-1.5 w-32">Qty / Target</th>
+                            <th className="px-2 py-1.5 w-20">Country</th>
+                            <th className="px-2 py-1.5 text-right w-16">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-[13px]">
@@ -193,23 +193,23 @@ export const RFQMaster = ({ data, actions, setModal }) => {
                             const details = getRfqDetails(item);
                             return (
                                 <tr key={item.id} className="hover:bg-blue-50/30 group transition-colors border-b border-slate-50 last:border-0">
-                                    <td className="px-3 py-1.5 whitespace-nowrap text-slate-500 font-mono text-[11px]">{formatDate(item.createdAt)}</td>
-                                    <td className="px-3 py-1.5 font-medium text-slate-700 text-[12px] truncate max-w-[130px]" title={getVendorName(item.vendorId)}>{getVendorName(item.vendorId)}</td>
-                                    <td className="px-3 py-1.5">
-                                        <span className={`text-[9px] font-bold uppercase tracking-wider px-1 py-px rounded border ${item.requestType === 'Custom' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
-                                            {item.requestType}
+                                    <td className="px-2 py-1 whitespace-nowrap text-slate-500 font-mono text-[11px]">{formatDate(item.createdAt)}</td>
+                                    <td className="px-2 py-1 font-medium text-slate-700 text-[12px] truncate max-w-[110px]" title={getVendorName(item.vendorId)}>{getVendorName(item.vendorId)}</td>
+                                    <td className="px-2 py-1 whitespace-nowrap">
+                                        <span className={`text-[8px] font-bold uppercase tracking-wider px-1 py-px rounded border whitespace-nowrap ${item.requestType === 'Custom' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                                            {item.requestType === 'Product SKU' ? 'SKU' : item.requestType}
                                         </span>
                                     </td>
-                                    <td className="px-3 py-1.5">
+                                    <td className="px-2 py-1">
                                         <span className="font-semibold text-slate-800 text-[12px]">{details.title}</span>
-                                        <span className="text-[10px] text-slate-400 ml-1 truncate">{details.subtitle}</span>
+                                        <span className="text-[10px] text-slate-400 ml-1">{details.subtitle}</span>
                                     </td>
-                                    <td className="px-3 py-1.5">
+                                    <td className="px-2 py-1 whitespace-nowrap">
                                         <span className="text-slate-700 font-medium text-[12px]">{item.qty} <span className="text-[9px] text-slate-400 font-normal">units</span></span>
-                                        {item.targetPrice && <span className="text-[10px] text-slate-500 font-mono bg-slate-50 px-1 rounded border border-slate-100 ml-1">{item.currency} {item.targetPrice}</span>}
+                                        {item.targetPrice && <span className="text-[10px] text-slate-500 font-mono ml-1">{item.currency} {item.targetPrice}</span>}
                                     </td>
-                                    <td className="px-3 py-1.5 text-slate-600 text-[11px]">{item.countryOfSale || '-'}</td>
-                                    <td className="px-3 py-1.5 text-right">
+                                    <td className="px-2 py-1 text-slate-500 text-[10px] truncate max-w-[80px]" title={item.countryOfSale}>{item.countryOfSale || '-'}</td>
+                                    <td className="px-2 py-1 text-right">
                                         <div className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button onClick={(e) => generatePDF(e, item)} className="p-1 hover:bg-green-100 rounded text-slate-400 hover:text-green-600 transition-colors" title="Download PDF"><Icons.File className="w-3 h-3" /></button>
                                             <button onClick={() => setModal({ open: true, type: 'rfq', data: item, isEdit: true })} className="p-1 hover:bg-blue-100 rounded text-slate-400 hover:text-blue-600 transition-colors" title="Edit"><Icons.Edit className="w-3 h-3" /></button>

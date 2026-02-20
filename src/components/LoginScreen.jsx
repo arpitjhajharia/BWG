@@ -23,7 +23,7 @@ export const LoginScreen = ({ userProfiles, onLogin }) => {
                 <img
                     src={`${import.meta.env.BASE_URL}logo.png`}
                     alt="Biowearth"
-                    className="h-20 mx-auto mb-4 object-contain"
+                    className="h-32 mx-auto mb-4 object-contain"
                 />
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div>

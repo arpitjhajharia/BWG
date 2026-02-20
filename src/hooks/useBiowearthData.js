@@ -70,6 +70,7 @@ export const useBiowearthData = () => {
                                 packTypes: ['Jar', 'Pouch', 'Sachet', 'Bottle', 'Box'],
                                 leadSources: ['LinkedIn', 'Website', 'Referral', 'Cold Call'],
                                 leadStatuses: ['Lead', 'Active', 'Negotiation', 'Churned'],
+                                leadStatusGroups: { 'Lead': 'In-progress', 'Active': 'In-progress', 'Negotiation': 'In-progress', 'Churned': 'Complete' },
                                 taskGroups: ['Marketing', 'Admin', 'Website', 'HR', 'Operations'],
                                 vendorStatuses: ['Active', 'On Hold', 'Potential', 'Blacklisted']
                             };

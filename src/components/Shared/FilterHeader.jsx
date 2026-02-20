@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Icons } from '../ui/Icons';
 
-export const FilterHeader = ({ label, sortKey, currentSort, onSort, filterType, filterValue, onFilter, options }) => {
+export const FilterHeader = ({ label, sortKey, currentSort, onSort, filterType, filterValue, onFilter, options, optionGroups }) => {
     const [isOpen, setIsOpen] = useState(false);
     const ref = useRef(null);
 
@@ -15,6 +15,16 @@ export const FilterHeader = ({ label, sortKey, currentSort, onSort, filterType, 
         const current = Array.isArray(filterValue) ? filterValue : [];
         const updated = current.includes(option) ? current.filter(i => i !== option) : [...current, option];
         onFilter(updated);
+    };
+
+    const handleGroupToggle = (groupOptions) => {
+        const current = Array.isArray(filterValue) ? filterValue : [];
+        const allSelected = groupOptions.every(opt => current.includes(opt));
+        if (allSelected) {
+            onFilter(current.filter(i => !groupOptions.includes(i)));
+        } else {
+            onFilter([...new Set([...current, ...groupOptions])]);
+        }
     };
 
     return (
@@ -60,17 +70,49 @@ export const FilterHeader = ({ label, sortKey, currentSort, onSort, filterType, 
                                 </div>
                             </div>
                             <div className="max-h-56 overflow-y-auto scroller space-y-0.5">
-                                {options.map(opt => (
-                                    <label key={opt} className="flex items-center gap-2 px-1.5 py-1 hover:bg-slate-50 rounded-sm cursor-pointer group/opt">
-                                        <input
-                                            type="checkbox"
-                                            checked={(filterValue || []).includes(opt)}
-                                            onChange={() => handleMultiSelect(opt)}
-                                            className="rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
-                                        />
-                                        <span className={`text-[11px] font-medium ${(filterValue || []).includes(opt) ? 'text-blue-600' : 'text-slate-600'}`}>{opt}</span>
-                                    </label>
-                                ))}
+                                {optionGroups ? (
+                                    Object.entries(optionGroups).map(([groupName, groupOpts]) => {
+                                        const allChecked = groupOpts.length > 0 && groupOpts.every(opt => (filterValue || []).includes(opt));
+                                        const someChecked = groupOpts.some(opt => (filterValue || []).includes(opt));
+                                        return (
+                                            <div key={groupName}>
+                                                <label className={`flex items-center gap-2 px-1.5 py-1 rounded-sm cursor-pointer ${groupName === 'In-progress' ? 'bg-amber-50/60' : 'bg-emerald-50/60'}`}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={allChecked}
+                                                        ref={el => { if (el) el.indeterminate = someChecked && !allChecked; }}
+                                                        onChange={() => handleGroupToggle(groupOpts)}
+                                                        className="rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
+                                                    />
+                                                    <span className={`text-[10px] font-bold uppercase tracking-wider ${groupName === 'In-progress' ? 'text-amber-600' : 'text-emerald-600'}`}>{groupName}</span>
+                                                </label>
+                                                {groupOpts.map(opt => (
+                                                    <label key={opt} className="flex items-center gap-2 px-1.5 py-1 pl-5 hover:bg-slate-50 rounded-sm cursor-pointer group/opt">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={(filterValue || []).includes(opt)}
+                                                            onChange={() => handleMultiSelect(opt)}
+                                                            className="rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
+                                                        />
+                                                        <span className={`text-[11px] font-medium ${(filterValue || []).includes(opt) ? 'text-blue-600' : 'text-slate-600'}`}>{opt}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    options.map(opt => (
+                                        <label key={opt} className="flex items-center gap-2 px-1.5 py-1 hover:bg-slate-50 rounded-sm cursor-pointer group/opt">
+                                            <input
+                                                type="checkbox"
+                                                checked={(filterValue || []).includes(opt)}
+                                                onChange={() => handleMultiSelect(opt)}
+                                                className="rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
+                                            />
+                                            <span className={`text-[11px] font-medium ${(filterValue || []).includes(opt) ? 'text-blue-600' : 'text-slate-600'}`}>{opt}</span>
+                                        </label>
+                                    ))
+                                )}
                             </div>
                         </div>
                     )}

@@ -79,10 +79,7 @@ function App() {
       <aside className={`w-[220px] flex-shrink-0 bg-[#F8F9FA] border-r border-slate-200 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-[220px]'} lg:translate-x-0 lg:static fixed z-50 h-full`}>
         {/* Brand */}
         <div className="h-14 flex items-center px-5 border-b border-slate-200/60 bg-white">
-          <div className="font-bold text-lg tracking-tight text-slate-800 flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-black shadow-sm">N</div>
-            <span className="font-black text-slate-900 tracking-tighter">NIZONA<span className="text-blue-600">OS</span></span>
-          </div>
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Biowearth" className="h-11 object-contain" />
         </div>
 
         {/* Modules Navigation */}

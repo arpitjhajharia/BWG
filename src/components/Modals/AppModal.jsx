@@ -18,8 +18,12 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
     }, [skus, products]);
 
     const unlinkedSkus = useMemo(() => {
-        return cleanSkus.filter(s => !formulations.some(f => f.skuId === s.id) || (modal.isEdit && s.id === modal.data?.skuId));
-    }, [cleanSkus, formulations, modal.isEdit, modal.data?.skuId]);
+        const base = cleanSkus.filter(s => !formulations.some(f => f.skuId === s.id) || (modal.isEdit && s.id === modal.data?.skuId));
+        if (modal.isDuplicate && modal.data?.sourceProductId) {
+            return base.filter(s => s.productId === modal.data.sourceProductId);
+        }
+        return base;
+    }, [cleanSkus, formulations, modal.isEdit, modal.isDuplicate, modal.data?.skuId, modal.data?.sourceProductId]);
     const [form, setForm] = useState(modal.data || {});
 
     // Sync form state when modal opens
@@ -51,7 +55,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                     packSize: prev.packSize || ''
                 }));
             }
-            if (modal.type === 'formulation') {
+            if (modal.type === 'formulation' && !modal.isDuplicate) {
                 setForm(prev => ({ ...prev, ingredients: [], packaging: [] }));
             }
             if (modal.type === 'ors') {
@@ -471,6 +475,29 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                     )}
 
                     <div className="pt-2">
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Category (Product Formats)</label>
+                        <div className="flex flex-wrap gap-1.5 p-2 border border-slate-300 rounded bg-white min-h-[38px]">
+                            {(settings?.formats || []).map(fmt => {
+                                const selected = (form.categories || []).includes(fmt);
+                                return (
+                                    <button
+                                        key={fmt}
+                                        type="button"
+                                        onClick={() => {
+                                            const current = form.categories || [];
+                                            setForm({ ...form, categories: selected ? current.filter(c => c !== fmt) : [...current, fmt] });
+                                        }}
+                                        className={`text-[11px] font-semibold px-2 py-0.5 rounded border transition-colors ${selected ? 'bg-violet-100 text-violet-700 border-violet-300' : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'}`}
+                                    >
+                                        {fmt}
+                                    </button>
+                                );
+                            })}
+                            {(!settings?.formats || settings.formats.length === 0) && <span className="text-[11px] text-slate-300 italic">No formats configured</span>}
+                        </div>
+                    </div>
+
+                    <div className="pt-2">
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Folder Link (Google Drive / Dropbox)</label>
                         <input placeholder="https://..." className="w-full p-2 border border-slate-300 rounded text-[13px] text-blue-600 underline-offset-2 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value={form.driveLink || ''} onChange={e => setForm({ ...form, driveLink: e.target.value })} />
                     </div>
@@ -480,7 +507,18 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Status</label>
                             <select className="w-full p-2 border border-slate-300 rounded text-[13px] font-semibold text-slate-700 focus:ring-1 focus:ring-blue-500 outline-none" value={form.status || ''} onChange={e => setForm({ ...form, status: e.target.value })}>
                                 <option>Select Status...</option>
-                                {(settings?.leadStatuses || []).map(s => <option key={s} value={s}>{s}</option>)}
+                                {settings?.leadStatusGroups && Object.keys(settings.leadStatusGroups).length > 0 ? (
+                                    ['In-progress', 'Complete'].map(group => {
+                                        const groupStatuses = (settings?.leadStatuses || []).filter(s => (settings.leadStatusGroups[s] || 'In-progress') === group);
+                                        return groupStatuses.length > 0 ? (
+                                            <optgroup key={group} label={group}>
+                                                {groupStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+                                            </optgroup>
+                                        ) : null;
+                                    })
+                                ) : (
+                                    (settings?.leadStatuses || []).map(s => <option key={s} value={s}>{s}</option>)
+                                )}
                             </select>
                         </div>
                     )}
@@ -756,7 +794,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
             case 'formulation': return (
                 <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1 scroller">
                     <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                        <h3 className="font-bold text-lg text-slate-800">{modal.isEdit ? 'Edit' : 'New'} Formulation</h3>
+                        <h3 className="font-bold text-lg text-slate-800">{modal.isEdit ? 'Edit' : modal.isDuplicate ? 'Duplicate' : 'New'} Formulation</h3>
                     </div>
                     <div className="space-y-3 p-3 bg-slate-50/50 rounded border border-slate-200">
                         <div>
@@ -802,23 +840,23 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             <button onClick={() => handleArrayAdd('ingredients', { name: '', type: 'Active', per100g: '', perServing: '', perSku: '' })} className="text-[11px] text-blue-600 font-bold hover:underline">+ ADD INGREDIENT</button>
                         </div>
                         <div className="space-y-1.5">
-                            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                            <div className="grid grid-cols-[3fr_1fr_1fr_1fr_1fr_24px] gap-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">
                                 <div>Name</div>
                                 <div>Type</div>
-                                <div className="text-center">Qty %</div>
-                                <div className="text-center">/Serv ({form.dosageUnit || ''})</div>
-                                <div className="text-center">/SKU</div>
+                                <div className="text-right pr-1.5">Qty %</div>
+                                <div className="text-right pr-1.5">/Serv ({form.dosageUnit || ''})</div>
+                                <div className="text-right pr-1.5">/SKU</div>
                                 <div></div>
                             </div>
                             {(form.ingredients || []).map((ing, i) => (
-                                <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 items-center">
-                                    <input placeholder="Name" className="text-[12px] p-1.5 border border-slate-200 rounded bg-white" value={ing.name} onChange={e => handleArrayChange('ingredients', i, 'name', e.target.value)} />
-                                    <select className="text-[12px] p-1.5 border border-slate-200 rounded bg-slate-50" value={ing.type || 'Active'} onChange={e => handleArrayChange('ingredients', i, 'type', e.target.value)}>
+                                <div key={i} className="grid grid-cols-[3fr_1fr_1fr_1fr_1fr_24px] gap-3 items-center">
+                                    <input placeholder="Name" className="text-[12px] p-1.5 border border-slate-200 rounded bg-white w-full min-w-0" value={ing.name} onChange={e => handleArrayChange('ingredients', i, 'name', e.target.value)} />
+                                    <select className="text-[12px] p-1.5 border border-slate-200 rounded bg-slate-50 w-full min-w-0" value={ing.type || 'Active'} onChange={e => handleArrayChange('ingredients', i, 'type', e.target.value)}>
                                         <option value="Active">Active</option>
                                         <option value="Other">Other</option>
                                     </select>
-                                    <input placeholder="0" type="number" step="any" className="text-[12px] p-1.5 border border-slate-200 rounded text-center" value={ing.per100g} onChange={e => handleArrayChange('ingredients', i, 'per100g', e.target.value)} />
-                                    <input placeholder="0" type="number" step="any" className="text-[12px] p-1.5 border border-slate-200 rounded text-center" value={ing.perServing} onChange={e => {
+                                    <input placeholder="0" type="number" step="any" className="text-[12px] p-1.5 border border-slate-200 rounded text-right w-full min-w-0" value={ing.per100g} onChange={e => handleArrayChange('ingredients', i, 'per100g', e.target.value)} />
+                                    <input placeholder="0" type="number" step="any" className="text-[12px] p-1.5 border border-slate-200 rounded text-right w-full min-w-0" value={ing.perServing} onChange={e => {
                                         const val = e.target.value;
                                         const servings = parseFloat(form.servingsPerSku) || 0;
                                         const perSku = servings > 0 ? (parseFloat(val) || 0) * servings : (ing.perSku || '');
@@ -826,8 +864,8 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                                         updated[i] = { ...updated[i], perServing: val, perSku: perSku };
                                         setForm({ ...form, ingredients: updated });
                                     }} />
-                                    <input placeholder="0" type="number" step="any" className="text-[12px] p-1.5 border border-slate-200 rounded text-center bg-slate-50 font-bold" value={ing.perSku} readOnly />
-                                    <button onClick={() => handleArrayDel('ingredients', i)} className="text-slate-300 hover:text-red-500"><Icons.X className="w-3.5 h-3.5" /></button>
+                                    <input placeholder="0" type="number" step="any" className="text-[12px] p-1.5 border border-slate-200 rounded text-right bg-slate-50 font-bold w-full min-w-0" value={ing.perSku} readOnly />
+                                    <button onClick={() => handleArrayDel('ingredients', i)} className="text-slate-300 hover:text-red-500 flex items-center justify-center"><Icons.X className="w-3.5 h-3.5" /></button>
                                 </div>
                             ))}
                         </div>
