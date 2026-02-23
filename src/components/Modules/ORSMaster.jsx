@@ -30,7 +30,7 @@ export const ORSMaster = ({ data, actions, setModal }) => {
         const type = item.recipientType || 'Vendor';
 
         // --- Helper Function to Create One PDF ---
-        const createDoc = (targetName, suffix) => {
+        const createDoc = (entity, suffix) => {
             const doc = new jsPDF();
             const sku = skus.find(s => s.id === item.skuId);
             const product = products.find(p => p.id === sku?.productId);
@@ -45,21 +45,29 @@ export const ORSMaster = ({ data, actions, setModal }) => {
                 ? formulation.packaging.map(p => `${p.item} (${p.qty})`).join(', ')
                 : 'None / Not Linked';
 
+            const displayName = entity?.officialName || entity?.companyName || 'Unknown';
+
             // --- Header ---
             doc.setFontSize(20);
             doc.text("OEM Request Sheet (ORS)", 105, 20, null, null, "center");
 
             doc.setFontSize(10);
-            // Removed PO No. Line
             doc.text(`Date: ${dateWithYear}`, 14, 35);
-            doc.text(`To: ${targetName}`, 14, 40); // Adjusted Y position
+            doc.text(`To: ${displayName}`, 14, 40);
+            let headerY = 40;
+            if (entity?.website) { headerY += 5; doc.text(`Website: ${entity.website}`, 14, headerY); }
+            if (entity?.country) { headerY += 5; doc.text(`Country: ${entity.country}`, 14, headerY); }
 
             // --- Main Details Table ---
             const tableBody = [
                 ['Product', product?.name || '-'],
+                ['Format', product?.format || '-'],
                 ['Variant', sku?.variant || '-'],
                 ['Flavour', sku?.flavour || '-'],
                 ['Pack Details', sku ? `${sku.packSize} ${sku.unit} (${sku.packType})` : '-'],
+                ['Description', [product?.description, sku?.description].filter(Boolean).join(' | ') || '-'],
+                ['Serving Size', formulation ? `${formulation.servingSizeValue || '-'} ${formulation.servingSizeUnit || ''}`.trim() : '-'],
+                ['Servings per SKU', formulation?.servingsPerSku || '-'],
                 ['Packing Materials', packingMaterials],
                 ['Quantity', `${item.qty || 0} units`],
                 ['Country of Sale', item.countryOfSale || '-'],
@@ -68,7 +76,7 @@ export const ORSMaster = ({ data, actions, setModal }) => {
             ];
 
             autoTable(doc, {
-                startY: 50, // Adjusted startY
+                startY: headerY + 10,
                 head: [['Field', 'Value']],
                 body: tableBody,
                 theme: 'grid',
@@ -138,16 +146,16 @@ export const ORSMaster = ({ data, actions, setModal }) => {
         try {
             // --- LOGIC FOR 3 SCENARIOS ---
             if (type === 'Vendor' || type === 'Both') {
-                const vName = getVendorName(item.vendorId);
-                createDoc(vName, 'Vendor');
+                const vendor = vendors.find(v => v.id === item.vendorId);
+                createDoc(vendor, 'Vendor');
             }
 
             if (type === 'Client' || type === 'Both') {
-                const cName = getClientName(item.clientId);
+                const client = clients.find(c => c.id === item.clientId);
                 if (type === 'Both') {
-                    setTimeout(() => createDoc(cName, 'Client'), 500);
+                    setTimeout(() => createDoc(client, 'Client'), 500);
                 } else {
-                    createDoc(cName, 'Client');
+                    createDoc(client, 'Client');
                 }
             }
 

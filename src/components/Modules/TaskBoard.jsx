@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Icons } from '../ui/Icons';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { FilterHeader } from '../shared/FilterHeader';
 import { formatDate } from '../../utils/helpers';
 
 // --- SUB-COMPONENT: INLINE TASK ---
@@ -84,22 +85,44 @@ export { InlineTask }; // Exporting this so other modules can use it
 export const TaskBoard = ({ data, actions, setModal }) => {
     const { tasks } = data;
     const [viewMode, setViewMode] = useState('list');
-    const [filterPriority] = useState('All');
-    const [sort] = useState({ key: 'dueDate', dir: 'asc' });
+    const [sort, setSort] = useState({ key: 'dueDate', dir: 'asc' });
+    const [colFilters, setColFilters] = useState({
+        title: '',
+        status: [],
+        assignee: [],
+        priority: [],
+        relatedName: '',
+        dueDate: ''
+    });
     const [localSearch, setLocalSearch] = useState('');
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [calendarAssignee, setCalendarAssignee] = useState('');
+
+    const handleSort = (key) => {
+        setSort(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
+    };
+
+    const assigneeOptions = useMemo(() => [...new Set(tasks.map(t => t.assignee).filter(Boolean))].sort(), [tasks]);
+    const priorityOptions = ['High', 'Medium', 'Low'];
+    const statusOptions = ['Pending', 'Completed'];
 
     const filteredTasks = useMemo(() => {
         return tasks.filter(t => {
-            if (filterPriority !== 'All' && t.priority !== filterPriority) return false;
             if (localSearch && !String(t.title).toLowerCase().includes(localSearch.toLowerCase())) return false;
+            if (colFilters.title && !String(t.title).toLowerCase().includes(colFilters.title.toLowerCase())) return false;
+            if (colFilters.status.length > 0 && !colFilters.status.includes(t.status || 'Pending')) return false;
+            if (colFilters.assignee.length > 0 && !colFilters.assignee.includes(t.assignee)) return false;
+            if (colFilters.priority.length > 0 && !colFilters.priority.includes(t.priority)) return false;
+            if (colFilters.relatedName && !(t.relatedName || '').toLowerCase().includes(colFilters.relatedName.toLowerCase())) return false;
+            if (colFilters.dueDate && !(t.dueDate || '').includes(colFilters.dueDate)) return false;
             return true;
         }).sort((a, b) => {
             const valA = (a[sort.key] || '');
             const valB = (b[sort.key] || '');
-            return sort.dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            if (typeof valA === 'string') return sort.dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            return sort.dir === 'asc' ? valA - valB : valB - valA;
         });
-    }, [tasks, filterPriority, localSearch, sort]);
+    }, [tasks, localSearch, colFilters, sort]);
 
     // --- CALENDAR HELPERS ---
     const getCalendarDays = () => {
@@ -173,10 +196,24 @@ export const TaskBoard = ({ data, actions, setModal }) => {
                             <button onClick={() => setViewMode('calendar-week')} className={`px-3 py-1 rounded ${viewMode === 'calendar-week' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Week</button>
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={prevPeriod} className="p-1 hover:bg-slate-100 rounded"><Icons.ChevronLeft className="w-5 h-5 text-slate-500" /></button>
-                        <button onClick={() => setCurrentDate(new Date())} className="text-xs font-bold text-blue-600 px-2 hover:underline">Today</button>
-                        <button onClick={nextPeriod} className="p-1 hover:bg-slate-100 rounded"><Icons.ChevronRight className="w-5 h-5 text-slate-500" /></button>
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <select
+                                className="appearance-none bg-white border border-slate-200 rounded-md pl-7 pr-6 py-1.5 text-[11px] font-semibold text-slate-600 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-200 focus:border-blue-400 transition-all hover:border-slate-300"
+                                value={calendarAssignee}
+                                onChange={e => setCalendarAssignee(e.target.value)}
+                            >
+                                <option value="">All Assignees</option>
+                                {assigneeOptions.map(a => <option key={a} value={a}>{a}</option>)}
+                            </select>
+                            <Icons.Users className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                            <Icons.ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={prevPeriod} className="p-1 hover:bg-slate-100 rounded"><Icons.ChevronLeft className="w-5 h-5 text-slate-500" /></button>
+                            <button onClick={() => setCurrentDate(new Date())} className="text-xs font-bold text-blue-600 px-2 hover:underline">Today</button>
+                            <button onClick={nextPeriod} className="p-1 hover:bg-slate-100 rounded"><Icons.ChevronRight className="w-5 h-5 text-slate-500" /></button>
+                        </div>
                     </div>
                 </div>
                 <div className="grid grid-cols-7 border-b border-slate-200 shrink-0">
@@ -187,7 +224,7 @@ export const TaskBoard = ({ data, actions, setModal }) => {
                         if (!day) return <div key={i} className="bg-slate-50 border-r border-b border-slate-100"></div>;
 
                         const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-                        const dayTasks = tasks.filter(t => t.dueDate === dateStr);
+                        const dayTasks = tasks.filter(t => t.dueDate === dateStr && (!calendarAssignee || t.assignee === calendarAssignee));
                         const isToday = new Date().toDateString() === day.toDateString();
 
                         return (
@@ -243,19 +280,32 @@ export const TaskBoard = ({ data, actions, setModal }) => {
             <div className="overflow-auto scroller flex-1">
                 <table className="w-full text-left border-collapse">
                     <thead>
-                        <tr>
-                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b w-8"></th>
-                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b">Task</th>
-                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b w-24">Due Date</th>
-                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b w-28">Assignee</th>
-                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b w-20">Priority</th>
-                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b w-36">Related To</th>
-                            <th className="sticky top-0 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 border-b w-16">Action</th>
+                        <tr className="divide-x divide-slate-100 border-b border-slate-200">
+                            <th className="sticky top-0 z-10 bg-slate-50 px-3 py-1.5 w-8"></th>
+                            <th className="sticky top-0 z-10 bg-slate-50/50 p-0 min-w-[180px]">
+                                <FilterHeader label="Task" sortKey="title" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.title} onFilter={v => setColFilters(p => ({ ...p, title: v }))} />
+                            </th>
+                            <th className="sticky top-0 z-10 bg-slate-50/50 p-0 w-28">
+                                <FilterHeader label="Due Date" sortKey="dueDate" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.dueDate} onFilter={v => setColFilters(p => ({ ...p, dueDate: v }))} />
+                            </th>
+                            <th className="sticky top-0 z-10 bg-slate-50/50 p-0 w-32">
+                                <FilterHeader label="Assignee" sortKey="assignee" currentSort={sort} onSort={handleSort} filterType="multi-select" filterValue={colFilters.assignee} onFilter={v => setColFilters(p => ({ ...p, assignee: v }))} options={assigneeOptions} />
+                            </th>
+                            <th className="sticky top-0 z-10 bg-slate-50/50 p-0 w-24">
+                                <FilterHeader label="Priority" sortKey="priority" currentSort={sort} onSort={handleSort} filterType="multi-select" filterValue={colFilters.priority} onFilter={v => setColFilters(p => ({ ...p, priority: v }))} options={priorityOptions} />
+                            </th>
+                            <th className="sticky top-0 z-10 bg-slate-50/50 p-0 w-36">
+                                <FilterHeader label="Related To" sortKey="relatedName" currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.relatedName} onFilter={v => setColFilters(p => ({ ...p, relatedName: v }))} />
+                            </th>
+                            <th className="sticky top-0 z-10 bg-slate-50/50 p-0 w-24">
+                                <FilterHeader label="Status" sortKey="status" currentSort={sort} onSort={handleSort} filterType="multi-select" filterValue={colFilters.status} onFilter={v => setColFilters(p => ({ ...p, status: v }))} options={statusOptions} />
+                            </th>
+                            <th className="sticky top-0 z-10 bg-slate-50 w-10"></th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-slate-100">
                         {filteredTasks.map(t => (
-                            <tr key={t.id} className="hover:bg-slate-50 group border-b border-slate-100 last:border-0">
+                            <tr key={t.id} className="hover:bg-slate-50/80 group transition-colors divide-x divide-slate-50">
                                 <td className="px-3 py-1.5">
                                     <input
                                         type="checkbox"
@@ -269,10 +319,10 @@ export const TaskBoard = ({ data, actions, setModal }) => {
                                 </td>
                                 <td className="px-3 py-1.5 text-slate-500 font-mono text-[11px] whitespace-nowrap">{formatDate(t.dueDate)}</td>
                                 <td className="px-3 py-1.5">
-                                    {t.assignee ? <span className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-px rounded-full border border-slate-200">{t.assignee}</span> : '-'}
+                                    {t.assignee ? <span className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-px rounded-full border border-slate-200">{t.assignee}</span> : <span className="text-slate-200 text-[10px]">—</span>}
                                 </td>
                                 <td className="px-3 py-1.5">
-                                    <span className={`text-[9px] font-bold uppercase px-1.5 py-px rounded ${t.priority === 'High' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>{t.priority}</span>
+                                    <span className={`text-[9px] font-bold uppercase px-1.5 py-px rounded ${t.priority === 'High' ? 'bg-red-50 text-red-600' : t.priority === 'Low' ? 'bg-slate-50 text-slate-500' : 'bg-blue-50 text-blue-600'}`}>{t.priority}</span>
                                 </td>
                                 <td className="px-3 py-1.5 text-[11px] text-slate-500">
                                     {t.relatedName ? (
@@ -280,13 +330,26 @@ export const TaskBoard = ({ data, actions, setModal }) => {
                                             <span className={`w-1.5 h-1.5 rounded-full ${t.contextType === 'Vendor' ? 'bg-purple-400' : 'bg-green-400'}`}></span>
                                             {t.relatedName}
                                         </div>
-                                    ) : '-'}
+                                    ) : <span className="text-slate-200 text-[10px]">—</span>}
                                 </td>
                                 <td className="px-3 py-1.5">
-                                    <button onClick={() => setModal({ open: true, type: 'task', data: t, isEdit: true })} className="text-slate-400 hover:text-blue-600"><Icons.Edit className="w-3 h-3" /></button>
+                                    <span className={`text-[9px] font-bold uppercase px-1.5 py-px rounded ${t.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>{t.status || 'Pending'}</span>
+                                </td>
+                                <td className="px-1 py-1.5 text-right">
+                                    <button onClick={() => setModal({ open: true, type: 'task', data: t, isEdit: true })} className="p-1 text-slate-300 hover:text-blue-500 transition-colors"><Icons.Edit className="w-3 h-3" /></button>
                                 </td>
                             </tr>
                         ))}
+                        {filteredTasks.length === 0 && (
+                            <tr>
+                                <td colSpan="8" className="py-20 text-center">
+                                    <div className="flex flex-col items-center justify-center text-slate-300">
+                                        <Icons.Search className="w-12 h-12 mb-2 opacity-20" />
+                                        <p className="text-xs font-bold uppercase tracking-[0.2em]">No Matching Tasks</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>

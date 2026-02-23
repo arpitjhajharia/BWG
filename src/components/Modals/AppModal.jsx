@@ -341,6 +341,10 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Shared Drive Link</label>
                         <input className="w-full p-2 border border-slate-300 rounded text-[13px] text-blue-600 focus:ring-1 focus:ring-blue-500 outline-none" placeholder="https://..." value={form.driveLink || ''} onChange={e => setForm({ ...form, driveLink: e.target.value })} />
                     </div>
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Description <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
+                        <textarea rows="2" className="w-full p-2 border border-slate-300 rounded text-[13px] text-slate-800 focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none" placeholder="Brief product description or notes..." value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} />
+                    </div>
                 </div>
             );
             case 'sku': return (
@@ -380,6 +384,10 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                     <div>
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Standard MOQ</label>
                         <input type="number" className="w-full p-2 border border-slate-300 rounded text-[13px]" placeholder="0" value={form.standardMoq || ''} onChange={e => setForm({ ...form, standardMoq: e.target.value })} />
+                    </div>
+                    <div>
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Description <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
+                        <textarea rows="2" className="w-full p-2 border border-slate-300 rounded text-[13px] text-slate-800 focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none" placeholder="SKU-specific notes or details..." value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} />
                     </div>
                 </div>
             );
@@ -884,6 +892,22 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                                     <button onClick={() => handleArrayDel('packaging', i)} className="text-slate-300 hover:text-red-500"><Icons.X className="w-3.5 h-3.5" /></button>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                    {/* Health Benefits Section */}
+                    <div>
+                        <div className="flex justify-between items-center mb-2 border-b border-slate-100 pb-1">
+                            <h4 className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">Health Benefits</h4>
+                            <button onClick={() => handleArrayAdd('healthBenefits', { benefit: '' })} className="text-[11px] text-blue-600 font-bold hover:underline">+ ADD BENEFIT</button>
+                        </div>
+                        <div className="space-y-1.5">
+                            {(form.healthBenefits || []).map((hb, i) => (
+                                <div key={i} className="flex gap-2 items-center">
+                                    <input placeholder="e.g. Supports joint health, Boosts immunity" className="text-[12px] p-1.5 border border-slate-200 rounded flex-1" value={hb.benefit} onChange={e => handleArrayChange('healthBenefits', i, 'benefit', e.target.value)} />
+                                    <button onClick={() => handleArrayDel('healthBenefits', i)} className="text-slate-300 hover:text-red-500"><Icons.X className="w-3.5 h-3.5" /></button>
+                                </div>
+                            ))}
+                            {(form.healthBenefits?.length === 0 || !form.healthBenefits) && <div className="text-[11px] text-slate-400 italic text-center py-2 bg-slate-50/30 rounded border border-dashed">No health benefits added.</div>}
                         </div>
                     </div>
                 </div>

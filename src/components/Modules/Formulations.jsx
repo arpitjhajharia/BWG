@@ -78,7 +78,11 @@ export const Formulations = ({ data, actions, setModal, targetFormulationId }) =
                                         <span className="font-bold text-[13px] text-slate-800 truncate">{s?.name || 'Unknown SKU'}</span>
                                         <div className="flex items-center gap-2 text-[10px] text-slate-500">
                                             <span className="font-mono">Serving: {f.servingSizeValue || '-'}{f.servingSizeUnit || ''}</span>
-                                            <span className="font-bold text-slate-600">{(f.ingredients || []).length} Items</span>
+                                            <span className="flex items-center gap-1">
+                                                {(f.ingredients || []).length > 0 && <span title="Ingredients" className="text-purple-500"><Icons.List className="w-3 h-3" /></span>}
+                                                {(f.packaging || []).length > 0 && <span title="Packaging BOM" className="text-amber-500"><Icons.Box className="w-3 h-3" /></span>}
+                                                {(f.healthBenefits || []).length > 0 && <span title="Health Benefits" className="text-green-500"><Icons.Check className="w-3 h-3" /></span>}
+                                            </span>
                                             <span className="text-slate-400">{formatDate(f.createdAt)}</span>
                                         </div>
                                     </div>
@@ -86,7 +90,7 @@ export const Formulations = ({ data, actions, setModal, targetFormulationId }) =
                                 <div className="flex items-center gap-1.5 flex-shrink-0">
                                     <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={(e) => { e.stopPropagation(); setModal({ open: true, type: 'formulation', data: f, isEdit: true }) }} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600 transition-colors" title="Edit"><Icons.Edit className="w-3 h-3" /></button>
-                                        <button onClick={(e) => { e.stopPropagation(); setModal({ open: true, type: 'formulation', data: { ...f, skuId: '', packaging: [], id: undefined, sourceProductId: s?.productId, ingredients: JSON.parse(JSON.stringify(f.ingredients || [])) }, isDuplicate: true }) }} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-purple-600 transition-colors" title="Duplicate"><Icons.Copy className="w-3 h-3" /></button>
+                                        <button onClick={(e) => { e.stopPropagation(); setModal({ open: true, type: 'formulation', data: { ...f, skuId: '', packaging: [], id: undefined, sourceProductId: s?.productId, ingredients: JSON.parse(JSON.stringify(f.ingredients || [])), healthBenefits: JSON.parse(JSON.stringify(f.healthBenefits || [])) }, isDuplicate: true }) }} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-purple-600 transition-colors" title="Duplicate"><Icons.Copy className="w-3 h-3" /></button>
                                         <button onClick={(e) => { e.stopPropagation(); actions.del('formulations', f.id) }} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-red-600 transition-colors" title="Delete"><Icons.Trash className="w-3 h-3" /></button>
                                     </div>
                                     <div className={`text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-blue-500' : ''}`}>
@@ -143,31 +147,55 @@ export const Formulations = ({ data, actions, setModal, targetFormulationId }) =
                                         </div>
                                     </div>
 
-                                    {/* Packaging Table */}
-                                    <div className="min-w-0">
-                                        <h4 className="text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 flex items-center gap-1">
-                                            <Icons.Box className="w-2.5 h-2.5" /> Packaging BOM
-                                        </h4>
-                                        <div className="bg-white rounded border border-slate-200 overflow-hidden shadow-sm">
-                                            <table className="w-full text-[11px] border-collapse">
-                                                <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                                                    <tr>
-                                                        <th className="px-2 py-1 text-left">Material</th>
-                                                        <th className="px-2 py-1 text-right w-20">Qty/Unit</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-100">
-                                                    {(f.packaging || []).map((pack, idx) => (
-                                                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                                                            <td className="px-2 py-1 font-medium text-slate-700">{pack.item}</td>
-                                                            <td className="px-2 py-1 text-right text-slate-600">{pack.qty}</td>
+                                    {/* Right Column: Packaging + Health Benefits */}
+                                    <div className="min-w-0 flex flex-col gap-4">
+                                        {/* Packaging Table */}
+                                        <div>
+                                            <h4 className="text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 flex items-center gap-1">
+                                                <Icons.Box className="w-2.5 h-2.5" /> Packaging BOM
+                                            </h4>
+                                            <div className="bg-white rounded border border-slate-200 overflow-hidden shadow-sm">
+                                                <table className="w-full text-[11px] border-collapse">
+                                                    <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                                        <tr>
+                                                            <th className="px-2 py-1 text-left">Material</th>
+                                                            <th className="px-2 py-1 text-right w-20">Qty/Unit</th>
                                                         </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                            {(f.packaging?.length === 0 || !f.packaging) && (
-                                                <div className="py-4 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest">No packaging items</div>
-                                            )}
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {(f.packaging || []).map((pack, idx) => (
+                                                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                                                <td className="px-2 py-1 font-medium text-slate-700">{pack.item}</td>
+                                                                <td className="px-2 py-1 text-right text-slate-600">{pack.qty}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                                {(f.packaging?.length === 0 || !f.packaging) && (
+                                                    <div className="py-4 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest">No packaging items</div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Health Benefits */}
+                                        <div>
+                                            <h4 className="text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-1.5 flex items-center gap-1">
+                                                <Icons.Check className="w-2.5 h-2.5" /> Health Benefits
+                                            </h4>
+                                            <div className="bg-white rounded border border-slate-200 overflow-hidden shadow-sm">
+                                                {(f.healthBenefits && f.healthBenefits.length > 0) ? (
+                                                    <div className="p-2 flex flex-col gap-1">
+                                                        {f.healthBenefits.map((hb, idx) => (
+                                                            <div key={idx} className="flex items-start gap-1.5 text-[11px] text-slate-700">
+                                                                <span className="text-green-500 mt-0.5 flex-shrink-0">•</span>
+                                                                <span>{hb.benefit}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="py-4 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest">No benefits listed</div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

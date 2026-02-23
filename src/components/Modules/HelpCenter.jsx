@@ -622,7 +622,7 @@ export const HelpCenter = () => {
                         </div>
                         Help Center
                     </h1>
-                    <p className="text-[12px] text-slate-400 mt-1 font-medium">Step-by-step guides for every module in Nizona OS.</p>
+                    <p className="text-[12px] text-slate-400 mt-1 font-medium">Step-by-step guides for every module in Biowearth.</p>
                 </div>
                 <div className="relative w-full sm:w-72">
                     <Icons.Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />

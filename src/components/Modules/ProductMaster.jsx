@@ -189,6 +189,7 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
                                             <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 bg-white px-1 py-px rounded border border-slate-200">{p.format}</span>
                                             {p.driveLink && <a href={p.driveLink} target="_blank" onClick={e => e.stopPropagation()} className="text-slate-300 hover:text-blue-500 transition-colors"><Icons.Link className="w-3 h-3" /></a>}
                                         </div>
+                                        {p.description && <p className="text-[10px] text-slate-400 leading-tight truncate max-w-md" title={p.description}>{p.description}</p>}
                                         <div className="flex items-center gap-3 text-[10px] uppercase font-bold tracking-wider">
                                             <div className="flex items-center gap-1 text-slate-500">
                                                 <Icons.Columns className="w-3 h-3 text-slate-300" />
@@ -251,8 +252,9 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
                                                         return (
                                                             <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group/row">
                                                                 <td className="px-3 py-1.5">
-                                                                    <span className="font-semibold text-slate-700 text-[12px]">{s.variant}</span>
+                                                                    <span className="font-semibold text-slate-700 text-[12px]" title={s.description || ''}>{s.variant}</span>
                                                                     {s.flavour && <span className="text-[9px] font-bold text-blue-500 uppercase tracking-tighter ml-1.5">{s.flavour}</span>}
+                                                                    {s.description && <p className="text-[9px] text-slate-400 leading-tight truncate max-w-[200px] mt-0.5" title={s.description}>{s.description}</p>}
                                                                 </td>
                                                                 <td className="px-3 py-1.5">
                                                                     <span className="text-[11px] font-medium text-slate-600">{s.packSize} {s.unit}</span>
