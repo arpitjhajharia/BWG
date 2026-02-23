@@ -97,13 +97,14 @@ export const TaskBoard = ({ data, actions, setModal }) => {
     const [localSearch, setLocalSearch] = useState('');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [calendarAssignee, setCalendarAssignee] = useState('');
+    const [dragTaskId, setDragTaskId] = useState(null);
 
     const handleSort = (key) => {
         setSort(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
     };
 
     const assigneeOptions = useMemo(() => [...new Set(tasks.map(t => t.assignee).filter(Boolean))].sort(), [tasks]);
-    const priorityOptions = ['High', 'Medium', 'Low'];
+    const priorityOptions = ['High', 'Normal'];
     const statusOptions = ['Pending', 'Completed'];
 
     const filteredTasks = useMemo(() => {
@@ -228,7 +229,13 @@ export const TaskBoard = ({ data, actions, setModal }) => {
                         const isToday = new Date().toDateString() === day.toDateString();
 
                         return (
-                            <div key={i} className={`border-r border-b border-slate-100 p-2 min-h-[100px] relative hover:bg-slate-50 transition-colors group ${isWeek ? 'min-h-[400px]' : ''}`}>
+                            <div
+                                key={i}
+                                className={`border-r border-b border-slate-100 p-2 min-h-[100px] relative hover:bg-slate-50 transition-colors group ${isWeek ? 'min-h-[400px]' : ''}`}
+                                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-blue-400', 'ring-inset', 'bg-blue-50/50'); }}
+                                onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2', 'ring-blue-400', 'ring-inset', 'bg-blue-50/50'); }}
+                                onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('ring-2', 'ring-blue-400', 'ring-inset', 'bg-blue-50/50'); if (dragTaskId) { actions.update('tasks', dragTaskId, { dueDate: dateStr }); setDragTaskId(null); } }}
+                            >
                                 <div className={`text-xs font-medium mb-1 ${isToday ? 'bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center' : 'text-slate-500'}`}>
                                     {day.getDate()}
                                 </div>
@@ -239,8 +246,11 @@ export const TaskBoard = ({ data, actions, setModal }) => {
                                         return (
                                             <div
                                                 key={t.id}
+                                                draggable
+                                                onDragStart={(e) => { setDragTaskId(t.id); e.dataTransfer.effectAllowed = 'move'; }}
+                                                onDragEnd={() => setDragTaskId(null)}
                                                 onClick={() => setModal({ open: true, type: 'task', data: t, isEdit: true })}
-                                                className={`text-[10px] px-1.5 py-1 rounded cursor-pointer border mb-1 whitespace-normal break-words ${colorClass} ${t.status === 'Completed' ? 'opacity-50 line-through' : ''}`}
+                                                className={`text-[10px] px-1.5 py-1 rounded cursor-grab active:cursor-grabbing border mb-1 whitespace-normal break-words group/task ${colorClass} ${t.status === 'Completed' ? 'opacity-50 line-through' : ''} ${dragTaskId === t.id ? 'opacity-40 scale-95' : ''} transition-all`}
                                             >
                                                 <div className="flex items-start gap-1">
                                                     <input
@@ -250,7 +260,11 @@ export const TaskBoard = ({ data, actions, setModal }) => {
                                                         onChange={(e) => actions.update('tasks', t.id, { status: e.target.checked ? 'Completed' : 'Pending' })}
                                                         className="mt-0.5 w-3 h-3 rounded border-slate-300 text-blue-600 focus:ring-0 cursor-pointer bg-white"
                                                     />
-                                                    <div className="font-bold leading-tight mb-0.5">{t.title}</div>
+                                                    <div className="flex-1 font-bold leading-tight mb-0.5">{t.title}</div>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); if (confirm('Delete this task?')) actions.del('tasks', t.id); }}
+                                                        className="opacity-0 group-hover/task:opacity-100 p-0.5 hover:text-red-400 transition-all shrink-0"
+                                                    ><Icons.Trash className="w-2.5 h-2.5" /></button>
                                                 </div>
                                                 {t.relatedName && (
                                                     <div className={`text-[9px] ${isDark ? 'text-white/80' : 'text-slate-600'} truncate pl-4`}>
@@ -330,13 +344,21 @@ export const TaskBoard = ({ data, actions, setModal }) => {
                                             <span className={`w-1.5 h-1.5 rounded-full ${t.contextType === 'Vendor' ? 'bg-purple-400' : 'bg-green-400'}`}></span>
                                             {t.relatedName}
                                         </div>
+                                    ) : t.taskGroup ? (
+                                        <div className="flex items-center gap-1">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                                            {t.taskGroup}
+                                        </div>
                                     ) : <span className="text-slate-200 text-[10px]">—</span>}
                                 </td>
                                 <td className="px-3 py-1.5">
                                     <span className={`text-[9px] font-bold uppercase px-1.5 py-px rounded ${t.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>{t.status || 'Pending'}</span>
                                 </td>
                                 <td className="px-1 py-1.5 text-right">
-                                    <button onClick={() => setModal({ open: true, type: 'task', data: t, isEdit: true })} className="p-1 text-slate-300 hover:text-blue-500 transition-colors"><Icons.Edit className="w-3 h-3" /></button>
+                                    <div className="flex items-center justify-end gap-0.5">
+                                        <button onClick={() => setModal({ open: true, type: 'task', data: t, isEdit: true })} className="p-1 text-slate-300 hover:text-blue-500 transition-colors"><Icons.Edit className="w-3 h-3" /></button>
+                                        <button onClick={() => { if (confirm('Delete this task?')) actions.del('tasks', t.id); }} className="p-1 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><Icons.Trash className="w-3 h-3" /></button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

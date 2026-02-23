@@ -1722,7 +1722,14 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                 <div className="flex-1 overflow-auto p-6 scroller">
                     {renderContent()}
                 </div>
-                <div className="flex justify-end items-center px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
+                <div className="flex justify-between items-center px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
+                    <div>
+                        {modal.isEdit && modal.type === 'task' && (
+                            <Button variant="secondary" className="px-4 text-red-600 hover:bg-red-50 hover:border-red-200" onClick={() => { if (confirm('Delete this task?')) { actions.del('tasks', modal.data.id); setModal({ open: false, type: null, data: null, isEdit: false }); } }}>
+                                <Icons.Trash className="w-3.5 h-3.5 mr-1" /> Delete
+                            </Button>
+                        )}
+                    </div>
                     <div className="flex gap-2">
                         <Button variant="secondary" className="px-5" onClick={() => setModal({ open: false, type: null, data: null, isEdit: false })}>Cancel</Button>
                         <Button className="px-8 shadow-sm" onClick={submit}>
