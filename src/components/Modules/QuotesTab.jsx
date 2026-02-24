@@ -126,75 +126,106 @@ export const QuotesTab = ({ data, actions, setModal }) => {
                             })}
                         </tbody>
                     </table>
-                ) : (
-                    <table className="w-full text-left border-collapse">
-                        <thead className="sticky top-0 bg-slate-50/80 backdrop-blur-md text-[10px] font-bold text-slate-400 border-b border-slate-200 z-10 uppercase tracking-widest">
-                            <tr>
-                                <th className="px-2 py-1.5 border-b border-slate-200 w-20">ID</th>
-                                <th className="px-2 py-1.5 border-b border-slate-200">Client</th>
-                                <th className="px-2 py-1.5 border-b border-slate-200">SKU</th>
-                                <th className="px-2 py-1.5 border-b border-slate-200 text-right w-16">MOQ</th>
-                                <th className="px-2 py-1.5 border-b border-slate-200 text-right">Price</th>
-                                <th className="px-2 py-1.5 border-b border-slate-200 text-right">Total</th>
-                                <th className="px-2 py-1.5 border-b border-slate-200 text-center w-16">Status</th>
-                                <th className="px-2 py-1.5 border-b border-slate-200">Base Cost</th>
-                                <th className="px-2 py-1.5 border-b border-slate-200 text-right">Margin</th>
-                                <th className="px-2 py-1.5 border-b border-slate-200 text-center w-10">Doc</th>
-                                <th className="px-2 py-1.5 border-b border-slate-200 w-14"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 text-[11px]">
-                            {filteredQuotesSent.map(q => {
-                                const c = clients.find(x => x.id === q.clientId);
-                                const s = skus.find(x => x.id === q.skuId);
-                                const baseQuote = quotesReceived.find(bq => bq.id === q.baseCostId);
-                                const baseVendor = vendors.find(v => v.id === baseQuote?.vendorId);
-                                const totalRevenue = q.sellingPrice * q.moq;
-                                const totalCost = q.baseCostPrice * q.moq;
-                                const totalMargin = totalRevenue - totalCost;
-                                const marginPct = totalCost ? ((totalMargin / totalCost) * 100).toFixed(1) : 0;
+                ) : (() => {
+                    // Group sales quotes by quoteId
+                    const quoteGroups = {};
+                    filteredQuotesSent.forEach(q => {
+                        const key = q.quoteId || q.id;
+                        if (!quoteGroups[key]) quoteGroups[key] = [];
+                        quoteGroups[key].push(q);
+                    });
+                    const groupEntries = Object.entries(quoteGroups);
 
-                                return (
-                                    <tr key={q.id} className="group hover:bg-blue-50/30 transition-colors">
-                                        <td className="px-2 py-1 font-mono text-slate-400 text-[10px] whitespace-nowrap">{q.quoteId}</td>
-                                        <td className="px-2 py-1 font-semibold text-slate-700 text-[12px] truncate max-w-[130px]" title={c?.companyName}>{c?.companyName || 'Unknown'}</td>
-                                        <td className="px-2 py-1 text-[11px] font-medium text-slate-600 truncate max-w-[180px]" title={s?.name}>{s?.name || 'Unknown SKU'}</td>
-                                        <td className="px-2 py-1 text-right font-mono text-slate-600">{q.moq}</td>
-                                        <td className="px-2 py-1 text-right font-semibold text-slate-700 whitespace-nowrap">{formatMoney(q.sellingPrice)}</td>
-                                        <td className="px-2 py-1 text-right font-bold text-blue-600 whitespace-nowrap">{formatMoney(totalRevenue)}</td>
-                                        <td className="px-2 py-1 text-center">
-                                            <span className={`text-[8px] font-bold uppercase tracking-wider px-1 py-px rounded border ${q.status === 'Active' ? 'text-green-700 bg-green-50 border-green-100' : q.status === 'Closed' ? 'text-slate-500 bg-slate-50 border-slate-200' : 'text-yellow-700 bg-yellow-50 border-yellow-100'}`}>
-                                                {q.status || 'Draft'}
-                                            </span>
-                                        </td>
-                                        <td className="px-2 py-1 whitespace-nowrap">
-                                            {baseQuote ? (
-                                                <span className="text-[11px] text-slate-600"><span className="font-semibold">{baseVendor?.companyName}</span> <span className="text-slate-400">@ {formatMoney(baseQuote.price)}</span></span>
-                                            ) : <span className="text-[9px] font-bold text-yellow-600 bg-yellow-50 px-1 py-px rounded border border-yellow-100">No Base</span>}
-                                        </td>
-                                        <td className="px-2 py-1 text-right whitespace-nowrap">
-                                            <span className={`font-bold font-mono text-[11px] ${marginPct > 20 ? 'text-green-600' : marginPct > 10 ? 'text-yellow-600' : 'text-red-600'}`}>{formatMoney(totalMargin)}</span>
-                                            <span className="text-[9px] text-slate-400 ml-1">{marginPct}%</span>
-                                        </td>
-                                        <td className="px-2 py-1 text-center">
-                                            {q.driveLink && (
-                                                <a href={q.driveLink} target="_blank" rel="noreferrer" className="inline-flex p-0.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
-                                                    <Icons.File className="w-3 h-3" />
-                                                </a>
-                                            )}
-                                        </td>
-                                        <td className="px-2 py-1 text-right">
-                                            <div className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => setModal({ open: true, type: 'quoteSent', data: q, isEdit: true })} className="p-1 hover:bg-blue-100 rounded text-slate-400 hover:text-blue-600 transition-colors"><Icons.Edit className="w-3 h-3" /></button>
-                                                <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesSent', q.id) }} className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600 transition-colors"><Icons.X className="w-3 h-3" /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
-                )}
+                    return (
+                        <table className="w-full text-left border-collapse">
+                            <thead className="sticky top-0 bg-slate-50/80 backdrop-blur-md text-[10px] font-bold text-slate-400 border-b border-slate-200 z-10 uppercase tracking-widest">
+                                <tr>
+                                    <th className="px-2 py-1.5 border-b border-slate-200 w-20">ID</th>
+                                    <th className="px-2 py-1.5 border-b border-slate-200">Client</th>
+                                    <th className="px-2 py-1.5 border-b border-slate-200 w-20">Date</th>
+                                    <th className="px-2 py-1.5 border-b border-slate-200">SKU</th>
+                                    <th className="px-2 py-1.5 border-b border-slate-200 text-right w-16">MOQ</th>
+                                    <th className="px-2 py-1.5 border-b border-slate-200 text-right">Price</th>
+                                    <th className="px-2 py-1.5 border-b border-slate-200 text-right">Total</th>
+                                    <th className="px-2 py-1.5 border-b border-slate-200 text-center w-16">Status</th>
+                                    <th className="px-2 py-1.5 border-b border-slate-200">Base Cost</th>
+                                    <th className="px-2 py-1.5 border-b border-slate-200 text-right">Margin</th>
+                                    <th className="px-2 py-1.5 border-b border-slate-200 text-center w-10">Doc</th>
+                                    <th className="px-2 py-1.5 border-b border-slate-200 w-14"></th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-[11px]">
+                                {groupEntries.map(([groupId, groupQuotes]) => {
+                                    const firstQ = groupQuotes[0];
+                                    const c = clients.find(x => x.id === firstQ.clientId);
+                                    const isMulti = groupQuotes.length > 1;
+
+                                    return groupQuotes.map((q, idx) => {
+                                        const s = skus.find(x => x.id === q.skuId);
+                                        const baseQuote = quotesReceived.find(bq => bq.id === q.baseCostId);
+                                        const baseVendor = vendors.find(v => v.id === baseQuote?.vendorId);
+                                        const totalRevenue = q.sellingPrice * q.moq;
+                                        const totalCost = q.baseCostPrice * q.moq;
+                                        const totalMargin = totalRevenue - totalCost;
+                                        const marginPct = totalCost ? ((totalMargin / totalCost) * 100).toFixed(1) : 0;
+                                        const isFirst = idx === 0;
+                                        const isLast = idx === groupQuotes.length - 1;
+
+                                        return (
+                                            <tr key={q.id} className={`group hover:bg-blue-50/30 transition-colors ${isFirst && isMulti ? 'border-t-2 border-t-slate-200' : ''} ${!isLast && isMulti ? '' : 'border-b border-slate-100'}`}>
+                                                {/* Quote ID & Client: show only on first row, span remaining */}
+                                                {isFirst ? (
+                                                    <>
+                                                        <td className="px-2 py-1 font-mono text-slate-400 text-[10px] whitespace-nowrap align-top" rowSpan={isMulti ? groupQuotes.length : undefined}>
+                                                            {q.quoteId}
+                                                        </td>
+                                                        <td className="px-2 py-1 font-semibold text-slate-700 text-[12px] truncate max-w-[130px] align-top" rowSpan={isMulti ? groupQuotes.length : undefined} title={c?.companyName}>
+                                                            {c?.companyName || 'Unknown'}
+                                                        </td>
+                                                        <td className="px-2 py-1 font-mono text-slate-500 text-[10px] whitespace-nowrap align-top" rowSpan={isMulti ? groupQuotes.length : undefined}>
+                                                            {q.date || '—'}
+                                                        </td>
+                                                    </>
+                                                ) : null}
+                                                <td className="px-2 py-1 text-[11px] font-medium text-slate-600 truncate max-w-[180px]" title={s?.name}>{s?.name || 'Unknown SKU'}</td>
+                                                <td className="px-2 py-1 text-right font-mono text-slate-600">{q.moq}</td>
+                                                <td className="px-2 py-1 text-right font-semibold text-slate-700 whitespace-nowrap">{formatMoney(q.sellingPrice)}</td>
+                                                <td className="px-2 py-1 text-right font-bold text-blue-600 whitespace-nowrap">{formatMoney(totalRevenue)}</td>
+                                                <td className="px-2 py-1 text-center">
+                                                    <span className={`text-[8px] font-bold uppercase tracking-wider px-1 py-px rounded border ${q.status === 'Active' ? 'text-green-700 bg-green-50 border-green-100' : q.status === 'Closed' ? 'text-slate-500 bg-slate-50 border-slate-200' : 'text-yellow-700 bg-yellow-50 border-yellow-100'}`}>
+                                                        {q.status || 'Draft'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-2 py-1 whitespace-nowrap">
+                                                    {baseQuote ? (
+                                                        <span className="text-[11px] text-slate-600"><span className="font-semibold">{baseVendor?.companyName}</span> <span className="text-slate-400">@ {formatMoney(baseQuote.price)}</span></span>
+                                                    ) : <span className="text-[9px] font-bold text-yellow-600 bg-yellow-50 px-1 py-px rounded border border-yellow-100">No Base</span>}
+                                                </td>
+                                                <td className="px-2 py-1 text-right whitespace-nowrap">
+                                                    <span className={`font-bold font-mono text-[11px] ${marginPct > 20 ? 'text-green-600' : marginPct > 10 ? 'text-yellow-600' : 'text-red-600'}`}>{formatMoney(totalMargin)}</span>
+                                                    <span className="text-[9px] text-slate-400 ml-1">{marginPct}%</span>
+                                                </td>
+                                                <td className="px-2 py-1 text-center">
+                                                    {q.driveLink && (
+                                                        <a href={q.driveLink} target="_blank" rel="noreferrer" className="inline-flex p-0.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
+                                                            <Icons.File className="w-3 h-3" />
+                                                        </a>
+                                                    )}
+                                                </td>
+                                                <td className="px-2 py-1 text-right">
+                                                    <div className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button onClick={() => setModal({ open: true, type: 'quoteSent', data: q, isEdit: true })} className="p-1 hover:bg-blue-100 rounded text-slate-400 hover:text-blue-600 transition-colors"><Icons.Edit className="w-3 h-3" /></button>
+                                                        <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesSent', q.id) }} className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600 transition-colors"><Icons.X className="w-3 h-3" /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    });
+                                })}
+                            </tbody>
+                        </table>
+                    );
+                })()}
             </div>
 
             <div className="md:hidden flex-1 overflow-auto space-y-3 pb-12 scroller">

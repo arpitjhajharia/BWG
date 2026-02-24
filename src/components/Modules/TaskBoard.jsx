@@ -98,6 +98,7 @@ export const TaskBoard = ({ data, actions, setModal }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [calendarAssignee, setCalendarAssignee] = useState('');
     const [dragTaskId, setDragTaskId] = useState(null);
+    const [hideCompleted, setHideCompleted] = useState(true);
 
     const handleSort = (key) => {
         setSort(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
@@ -109,6 +110,7 @@ export const TaskBoard = ({ data, actions, setModal }) => {
 
     const filteredTasks = useMemo(() => {
         return tasks.filter(t => {
+            if (hideCompleted && t.status === 'Completed') return false;
             if (localSearch && !String(t.title).toLowerCase().includes(localSearch.toLowerCase())) return false;
             if (colFilters.title && !String(t.title).toLowerCase().includes(colFilters.title.toLowerCase())) return false;
             if (colFilters.status.length > 0 && !colFilters.status.includes(t.status || 'Pending')) return false;
@@ -123,7 +125,7 @@ export const TaskBoard = ({ data, actions, setModal }) => {
             if (typeof valA === 'string') return sort.dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             return sort.dir === 'asc' ? valA - valB : valB - valA;
         });
-    }, [tasks, localSearch, colFilters, sort]);
+    }, [tasks, localSearch, colFilters, sort, hideCompleted]);
 
     // --- CALENDAR HELPERS ---
     const getCalendarDays = () => {
@@ -186,7 +188,7 @@ export const TaskBoard = ({ data, actions, setModal }) => {
         const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
         return (
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm h-full flex flex-col overflow-auto">
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-4">
                         <h3 className="font-bold text-lg text-slate-800">
@@ -220,70 +222,72 @@ export const TaskBoard = ({ data, actions, setModal }) => {
                 <div className="grid grid-cols-7 border-b border-slate-200 shrink-0">
                     {weekDays.map(d => <div key={d} className="p-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">{d}</div>)}
                 </div>
-                <div className="grid grid-cols-7" style={{ gridAutoRows: isWeek ? undefined : 'minmax(100px, auto)' }}>
-                    {days.map((day, i) => {
-                        if (!day) return <div key={i} className="bg-slate-50 border-r border-b border-slate-100"></div>;
+                <div className="flex-1 overflow-auto scroller">
+                    <div className="grid grid-cols-7" style={{ gridAutoRows: isWeek ? undefined : 'minmax(100px, auto)' }}>
+                        {days.map((day, i) => {
+                            if (!day) return <div key={i} className="bg-slate-50 border-r border-b border-slate-100"></div>;
 
-                        const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-                        const dayTasks = tasks.filter(t => t.dueDate === dateStr && (!calendarAssignee || t.assignee === calendarAssignee));
-                        const isToday = new Date().toDateString() === day.toDateString();
+                            const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+                            const dayTasks = tasks.filter(t => t.dueDate === dateStr && (!calendarAssignee || t.assignee === calendarAssignee) && (!hideCompleted || t.status !== 'Completed'));
+                            const isToday = new Date().toDateString() === day.toDateString();
 
-                        return (
-                            <div
-                                key={i}
-                                className={`border-r border-b border-slate-100 p-2 min-h-[100px] relative hover:bg-slate-50 transition-colors group ${isWeek ? 'min-h-[400px]' : ''}`}
-                                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-blue-400', 'ring-inset', 'bg-blue-50/50'); }}
-                                onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2', 'ring-blue-400', 'ring-inset', 'bg-blue-50/50'); }}
-                                onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('ring-2', 'ring-blue-400', 'ring-inset', 'bg-blue-50/50'); if (dragTaskId) { actions.update('tasks', dragTaskId, { dueDate: dateStr }); setDragTaskId(null); } }}
-                            >
-                                <div className={`text-xs font-medium mb-1 ${isToday ? 'bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center' : 'text-slate-500'}`}>
-                                    {day.getDate()}
-                                </div>
-                                <div className="space-y-1">
-                                    {dayTasks.map(t => {
-                                        const colorClass = getAssigneeColor(t.assignee);
-                                        const isDark = colorClass.includes('text-white');
-                                        return (
-                                            <div
-                                                key={t.id}
-                                                draggable
-                                                onDragStart={(e) => { setDragTaskId(t.id); e.dataTransfer.effectAllowed = 'move'; }}
-                                                onDragEnd={() => setDragTaskId(null)}
-                                                onClick={() => setModal({ open: true, type: 'task', data: t, isEdit: true })}
-                                                className={`text-[10px] px-1.5 py-1 rounded cursor-grab active:cursor-grabbing border mb-1 whitespace-normal break-words group/task ${colorClass} ${t.status === 'Completed' ? 'opacity-50 line-through' : ''} ${dragTaskId === t.id ? 'opacity-40 scale-95' : ''} transition-all`}
-                                            >
-                                                <div className="flex items-start gap-1">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={t.status === 'Completed'}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        onChange={(e) => actions.update('tasks', t.id, { status: e.target.checked ? 'Completed' : 'Pending' })}
-                                                        className="mt-0.5 w-3 h-3 rounded border-slate-300 text-blue-600 focus:ring-0 cursor-pointer bg-white"
-                                                    />
-                                                    <div className="flex-1 font-bold leading-tight mb-0.5">{t.title}</div>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); if (confirm('Delete this task?')) actions.del('tasks', t.id); }}
-                                                        className="opacity-0 group-hover/task:opacity-100 p-0.5 hover:text-red-400 transition-all shrink-0"
-                                                    ><Icons.Trash className="w-2.5 h-2.5" /></button>
-                                                </div>
-                                                {t.relatedName && (
-                                                    <div className={`text-[9px] ${isDark ? 'text-white/80' : 'text-slate-600'} truncate pl-4`}>
-                                                        {t.contextType === 'Vendor' ? '🏭 ' : '👤 '}{t.relatedName}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                <button
-                                    onClick={() => setModal({ open: true, type: 'task', data: { dueDate: dateStr } })}
-                                    className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-blue-600 bg-white rounded shadow-sm border border-slate-200"
+                            return (
+                                <div
+                                    key={i}
+                                    className={`border-r border-b border-slate-100 p-2 min-h-[100px] relative hover:bg-slate-50 transition-colors group ${isWeek ? 'min-h-[400px]' : ''}`}
+                                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-blue-400', 'ring-inset', 'bg-blue-50/50'); }}
+                                    onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2', 'ring-blue-400', 'ring-inset', 'bg-blue-50/50'); }}
+                                    onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('ring-2', 'ring-blue-400', 'ring-inset', 'bg-blue-50/50'); if (dragTaskId) { actions.update('tasks', dragTaskId, { dueDate: dateStr }); setDragTaskId(null); } }}
                                 >
-                                    <Icons.Plus className="w-3 h-3" />
-                                </button>
-                            </div>
-                        );
-                    })}
+                                    <div className={`text-xs font-medium mb-1 ${isToday ? 'bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center' : 'text-slate-500'}`}>
+                                        {day.getDate()}
+                                    </div>
+                                    <div className="space-y-1">
+                                        {dayTasks.map(t => {
+                                            const colorClass = getAssigneeColor(t.assignee);
+                                            const isDark = colorClass.includes('text-white');
+                                            return (
+                                                <div
+                                                    key={t.id}
+                                                    draggable
+                                                    onDragStart={(e) => { setDragTaskId(t.id); e.dataTransfer.effectAllowed = 'move'; }}
+                                                    onDragEnd={() => setDragTaskId(null)}
+                                                    onClick={() => setModal({ open: true, type: 'task', data: t, isEdit: true })}
+                                                    className={`text-[10px] px-1.5 py-1 rounded cursor-grab active:cursor-grabbing border mb-1 whitespace-normal break-words group/task ${colorClass} ${t.status === 'Completed' ? 'opacity-50 line-through' : ''} ${dragTaskId === t.id ? 'opacity-40 scale-95' : ''} transition-all`}
+                                                >
+                                                    <div className="flex items-start gap-1">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={t.status === 'Completed'}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onChange={(e) => actions.update('tasks', t.id, { status: e.target.checked ? 'Completed' : 'Pending' })}
+                                                            className="mt-0.5 w-3 h-3 rounded border-slate-300 text-blue-600 focus:ring-0 cursor-pointer bg-white"
+                                                        />
+                                                        <div className="flex-1 font-bold leading-tight mb-0.5">{t.title}</div>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); if (confirm('Delete this task?')) actions.del('tasks', t.id); }}
+                                                            className="opacity-0 group-hover/task:opacity-100 p-0.5 hover:text-red-400 transition-all shrink-0"
+                                                        ><Icons.Trash className="w-2.5 h-2.5" /></button>
+                                                    </div>
+                                                    {t.relatedName && (
+                                                        <div className={`text-[9px] ${isDark ? 'text-white/80' : 'text-slate-600'} truncate pl-4`}>
+                                                            {t.contextType === 'Vendor' ? '🏭 ' : '👤 '}{t.relatedName}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <button
+                                        onClick={() => setModal({ open: true, type: 'task', data: { dueDate: dateStr } })}
+                                        className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-blue-600 bg-white rounded shadow-sm border border-slate-200"
+                                    >
+                                        <Icons.Plus className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         );
@@ -390,6 +394,13 @@ export const TaskBoard = ({ data, actions, setModal }) => {
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setHideCompleted(h => !h)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[11px] font-bold uppercase tracking-wider transition-all ${hideCompleted ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}
+                    >
+                        <Icons.Check className="w-3.5 h-3.5" />
+                        {hideCompleted ? 'Open Only' : 'All Tasks'}
+                    </button>
                     <div className="relative"><Icons.Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" /><input className="pl-8 pr-3 py-1.5 border rounded text-sm focus:ring-1 ring-blue-200 outline-none w-48" placeholder="Search..." value={localSearch} onChange={e => setLocalSearch(e.target.value)} /></div>
                     <Button icon={Icons.Plus} onClick={() => setModal({ open: true, type: 'task' })}>New Task</Button>
                 </div>
