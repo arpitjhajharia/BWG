@@ -3,12 +3,12 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCOBsIw0IMvTViKnU6xD8dO4BfYd_DVMzw",
-    authDomain: "bwg-erp.firebaseapp.com",
-    projectId: "bwg-erp",
-    storageBucket: "bwg-erp.firebasestorage.app",
-    messagingSenderId: "318493308192",
-    appId: "1:318493308192:web:cb12963ae96d3335aad345"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
