@@ -244,10 +244,19 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                 for (const line of form.lineItems) {
                     await actions.add('quotesSent', { ...commonFields, skuId: line.skuId, moq: line.moq, sellingPrice: line.sellingPrice, baseCostId: line.baseCostId || '', baseCostPrice: line.baseCostPrice || '', status: line.status || 'Draft' });
                 }
-            } else if (modal.isEdit) {
-                await actions.update(col, modal.data.id, form);
             } else {
-                await actions.add(col, form);
+                // Specifically for users, we use email as ID for deterministic security rules
+                if (col === 'users') {
+                    if (modal.isEdit && modal.data.id !== form.email) {
+                        // Manual delete if ID changed (to avoid the confirm prompt for internal move)
+                        await actions.del('users', modal.data.id);
+                    }
+                    await actions.set('users', form.email, form);
+                } else if (modal.isEdit) {
+                    await actions.update(col, modal.data.id, form);
+                } else {
+                    await actions.add(col, form);
+                }
             }
             setModal({ open: false, type: null, data: null, isEdit: false });
         }
@@ -1335,18 +1344,14 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                         <input placeholder="e.g. John Doe" className="w-full p-2 border border-slate-300 rounded text-[13px]" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} />
                     </div>
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Username / Email</label>
-                        <input placeholder="e.g. john.doe" className="w-full p-2 border border-slate-300 rounded text-[13px]" value={form.username || ''} onChange={e => setForm({ ...form, username: e.target.value })} />
-                    </div>
-                    <div>
-                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Password</label>
-                        <input placeholder="••••••••" type="password" className="w-full p-2 border border-slate-300 rounded text-[13px]" value={form.password || ''} onChange={e => setForm({ ...form, password: e.target.value })} />
+                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Authorized Email</label>
+                        <input placeholder="name@company.com" className="w-full p-2 border border-slate-300 rounded text-[13px]" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} />
                     </div>
                     <div>
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Access Level / Role</label>
                         <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.role || ''} onChange={e => setForm({ ...form, role: e.target.value })}>
-                            <option value="Staff">Staff (Restricted Access)</option>
-                            <option value="Admin">Admin (Full Access)</option>
+                            <option value="User">Standard User</option>
+                            <option value="Admin">System Admin</option>
                         </select>
                     </div>
                 </div>

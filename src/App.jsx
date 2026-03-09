@@ -34,7 +34,7 @@ function App() {
   const [targetFormulationId, setTargetFormulationId] = useState(null);
 
   if (loading) return <div className="h-screen flex items-center justify-center text-slate-400">Loading Biowearth OS...</div>;
-  if (!currentUser) return <LoginScreen userProfiles={data.userProfiles} onLogin={setCurrentUser} />;
+  if (!currentUser) return <LoginScreen actions={actions} />;
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Icons.Dashboard },
@@ -108,13 +108,14 @@ function App() {
         <div className={`border-t border-slate-200/80 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.02)] transition-all duration-300 ${isSidebarHovered || isSidebarOpen ? 'p-4' : 'p-2'}`}>
           <div className={`flex items-center gap-3 rounded-lg hover:bg-slate-50 cursor-pointer transition-all group border border-transparent hover:border-slate-100 ${isSidebarHovered || isSidebarOpen ? 'p-2' : 'p-1 justify-center'}`}>
             <div className="w-9 h-9 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-500 group-hover:bg-blue-50 group-hover:border-blue-100 group-hover:text-blue-600 transition-all uppercase flex-shrink-0">
-              {currentUser.name.charAt(0)}{currentUser.name.split(' ')[1]?.charAt(0)}
+              {currentUser?.name?.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
+              {currentUser?.name?.split(' ')[1]?.charAt(0) || ''}
             </div>
             <div className={`flex-1 min-w-0 transition-all duration-300 ${isSidebarHovered || isSidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden hidden'}`}>
-              <div className="text-[12px] font-bold text-slate-800 truncate leading-tight">{currentUser.name}</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{currentUser.role}</div>
+              <div className="text-[12px] font-bold text-slate-800 truncate leading-tight">{currentUser?.name || currentUser?.email || 'User'}</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{currentUser?.role || 'User'}</div>
             </div>
-            <button onClick={() => setCurrentUser(null)} className={`text-slate-300 hover:text-red-500 transition-all p-1 ${isSidebarHovered || isSidebarOpen ? '' : 'hidden'}`} title="Logout">
+            <button onClick={() => actions.logout()} className={`text-slate-300 hover:text-red-500 transition-all p-1 ${isSidebarHovered || isSidebarOpen ? '' : 'hidden'}`} title="Logout">
               <Icons.Logout className="w-4 h-4" />
             </button>
           </div>

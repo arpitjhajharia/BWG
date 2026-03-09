@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
-import { collection, addDoc, updateDoc, doc, deleteDoc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { collection, addDoc, updateDoc, doc, deleteDoc, onSnapshot, setDoc, serverTimestamp, query, where, limit, getDocs, getDoc } from "firebase/firestore";
 import { auth, db, appId } from '../config/firebase';
 
 export const useBiowearthData = () => {
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
 
-    // Data State - Ensure 'ors' and 'rfqs' are initialized
+    // Data State
     const [data, setData] = useState({
         products: [], skus: [], vendors: [], clients: [], contacts: [],
         quotesReceived: [], quotesSent: [], tasks: [], orders: [], formulations: [],
@@ -19,16 +19,75 @@ export const useBiowearthData = () => {
     const actions = {
         add: (col, item) => addDoc(collection(db, `artifacts/${appId}/public/data`, col), { ...item, createdAt: serverTimestamp() }),
         update: (col, id, item) => updateDoc(doc(db, `artifacts/${appId}/public/data`, col, id), item),
+        set: (col, id, item) => setDoc(doc(db, `artifacts/${appId}/public/data`, col, id), { ...item, updatedAt: serverTimestamp() }),
         del: (col, id) => confirm("Delete this record?") && deleteDoc(doc(db, `artifacts/${appId}/public/data`, col, id)),
-        updateSetting: (key, newList) => setDoc(doc(db, `artifacts/${appId}/public/data`, 'settings', key), { list: newList })
+        updateSetting: (key, newList) => setDoc(doc(db, `artifacts/${appId}/public/data`, 'settings', key), { list: newList }),
+
+        // Auth Actions
+        login: async (email, password) => {
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                return userCredential.user;
+            } catch (error) {
+                console.error("Login failed:", error);
+                throw error;
+            }
+        },
+        loginWithGoogle: async () => {
+            try {
+                const provider = new GoogleAuthProvider();
+                const userCredential = await signInWithPopup(auth, provider);
+                return userCredential.user;
+            } catch (error) {
+                console.error("Google Login failed:", error);
+                throw error;
+            }
+        },
+        logout: () => signOut(auth)
     };
 
     useEffect(() => {
-        signInAnonymously(auth).catch(console.error);
-
-        return onAuthStateChanged(auth, (u) => {
-            if (u) {
+        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Fetch the user's role/profile from our users collection
                 const path = `artifacts/${appId}/public/data`;
+                const userDocRef = doc(db, path, 'users', user.email);
+                const userDocSnap = await getDoc(userDocRef);
+
+                let userData = null;
+                let userId = null;
+
+                if (userDocSnap.exists()) {
+                    userData = userDocSnap.data();
+                    userId = userDocSnap.id;
+                } else {
+                    // Fallback to query if document ID isn't email yet
+                    const userQuery = query(collection(db, path, 'users'), where("email", "==", user.email), limit(1));
+                    const userSnap = await getDocs(userQuery);
+                    if (!userSnap.empty) {
+                        userData = userSnap.docs[0].data();
+                        userId = userSnap.docs[0].id;
+                    }
+                }
+
+                if (!userData) {
+                    await signOut(auth);
+                    setCurrentUser(null);
+                    setLoading(false);
+                    // Emit a custom event so the login screen can catch it, or just throw
+                    window.dispatchEvent(new CustomEvent('login-error', { detail: 'Account strictly not whitelisted.' }));
+                    return;
+                }
+                const profile = {
+                    id: userId,
+                    ...userData,
+                    name: userData.name || user.displayName || user.email,
+                    email: user.email,
+                    role: userData.role || 'User'
+                };
+
+                setCurrentUser(profile);
+
                 const unsubscribes = [
                     onSnapshot(collection(db, path, 'products'), s => setData(p => ({ ...p, products: s.docs.map(d => ({ id: d.id, ...d.data() })) }))),
                     onSnapshot(collection(db, path, 'skus'), s => setData(p => ({ ...p, skus: s.docs.map(d => ({ id: d.id, ...d.data() })) }))),
@@ -40,53 +99,30 @@ export const useBiowearthData = () => {
                     onSnapshot(collection(db, path, 'tasks'), s => setData(p => ({ ...p, tasks: s.docs.map(d => ({ id: d.id, ...d.data() })) }))),
                     onSnapshot(collection(db, path, 'orders'), s => setData(p => ({ ...p, orders: s.docs.map(d => ({ id: d.id, ...d.data() })) }))),
                     onSnapshot(collection(db, path, 'formulations'), s => setData(p => ({ ...p, formulations: s.docs.map(d => ({ id: d.id, ...d.data() })) }))),
-
-                    // --- NEW LISTENERS ADDED HERE ---
                     onSnapshot(collection(db, path, 'ors'), s => setData(p => ({ ...p, ors: s.docs.map(d => ({ id: d.id, ...d.data() })) }))),
                     onSnapshot(collection(db, path, 'rfqs'), s => setData(p => ({ ...p, rfqs: s.docs.map(d => ({ id: d.id, ...d.data() })) }))),
                     onSnapshot(collection(db, path, 'inventoryInwards'), s => setData(p => ({ ...p, inventoryInwards: s.docs.map(d => ({ id: d.id, ...d.data() })) }))),
                     onSnapshot(collection(db, path, 'inventoryOutwards'), s => setData(p => ({ ...p, inventoryOutwards: s.docs.map(d => ({ id: d.id, ...d.data() })) }))),
-                    // --------------------------------
-
                     onSnapshot(collection(db, path, 'users'), s => {
                         const users = s.docs.map(d => ({ id: d.id, ...d.data() }));
                         setData(p => ({ ...p, userProfiles: users }));
-                        if (!users.some(u => u.username === 'admin')) {
-                            addDoc(collection(db, path, 'users'), { name: 'System Admin', username: 'admin', password: 'password123', role: 'Admin', createdAt: serverTimestamp() });
-                        }
                     }),
                     onSnapshot(collection(db, path, 'settings'), s => {
                         const newSettings = {};
-                        let hasData = false;
-                        s.docs.forEach(d => {
-                            newSettings[d.id] = d.data().list || [];
-                            hasData = true;
-                        });
-                        if (!hasData) {
-                            // Default settings if empty
-                            const defaults = {
-                                formats: ['Powder', 'Liquid', 'Tablet', 'Capsule', 'Gummy', 'Sachet'],
-                                units: ['g', 'kg', 'ml', 'L', 'pcs'],
-                                packTypes: ['Jar', 'Pouch', 'Sachet', 'Bottle', 'Box'],
-                                leadSources: ['LinkedIn', 'Website', 'Referral', 'Cold Call'],
-                                leadStatuses: ['Lead', 'Active', 'Negotiation', 'Churned'],
-                                leadStatusGroups: { 'Lead': 'In-progress', 'Active': 'In-progress', 'Negotiation': 'In-progress', 'Churned': 'Complete' },
-                                taskGroups: ['Marketing', 'Admin', 'Website', 'HR', 'Operations'],
-                                vendorStatuses: ['Active', 'On Hold', 'Potential', 'Blacklisted']
-                            };
-                            Object.keys(defaults).forEach(key => {
-                                setDoc(doc(db, path, 'settings', key), { list: defaults[key] });
-                            });
-                        } else {
-                            setData(p => ({ ...p, settings: { ...p.settings, ...newSettings } }));
-                        }
+                        s.docs.forEach(d => { newSettings[d.id] = d.data().list || []; });
+                        setData(p => ({ ...p, settings: { ...p.settings, ...newSettings } }));
                     })
                 ];
                 setLoading(false);
                 return () => unsubscribes.forEach(fn => fn());
+            } else {
+                setCurrentUser(null);
+                setLoading(false);
             }
         });
+
+        return () => unsubscribeAuth();
     }, []);
 
-    return { loading, data, actions, currentUser, setCurrentUser };
+    return { loading, data, actions, currentUser };
 };

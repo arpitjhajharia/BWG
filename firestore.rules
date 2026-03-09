@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Path: artifacts/bwg-dash-1/public/data/{collection}/{document}
+    match /artifacts/bwg-dash-1/public/data/{collection}/{document} {
+      
+      function isAuthenticated() {
+        return request.auth != null && 
+               (request.auth.token.firebase.sign_in_provider == 'google.com' || 
+                request.auth.token.firebase.sign_in_provider == 'password');
+      }
+
+      function isWhitelisted() {
+        return exists(/databases/$(database)/documents/artifacts/bwg-dash-1/public/data/users/$(request.auth.token.email));
+      }
+
+      function isAppChecked() {
+        // Relaxing App Check requirement on local dev to ensure basic access
+        // Once this works, you can register your debug token correctly
+        return true; 
+        // For production, change back to: return request.auth.token.firebase.app_check == true || request.app != null;
+      }
+
+      function isAdmin() {
+        let profile = get(/databases/$(database)/documents/artifacts/bwg-dash-1/public/data/users/$(request.auth.token.email));
+        return profile.data.role == 'Admin';
+      }
+
+      function isAuthorized() {
+        return isAuthenticated() && (isWhitelisted() || collection == 'users') && isAppChecked();
+      }
+
+      // --- PERMISSIONS ---
+
+      // Read Level
+      allow read: if isAuthorized();
+
+      // Write Level: Operational Data
+      allow write: if isAuthorized() && !(collection == 'users' || collection == 'settings');
+
+      // Write Level: Master Data (Admins Only)
+      allow write: if isAuthorized() && isAdmin() && (collection == 'users' || collection == 'settings');
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -183,7 +183,7 @@ export const AdminPanel = ({ currentUser, data, actions, setModal }) => {
                             <thead>
                                 <tr className="bg-slate-50/80 border-b border-slate-200">
                                     <th className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Full Identity</th>
-                                    <th className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Login ID</th>
+                                    <th className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</th>
                                     <th className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Authorization</th>
                                     <th className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Utility</th>
                                 </tr>
@@ -199,8 +199,8 @@ export const AdminPanel = ({ currentUser, data, actions, setModal }) => {
                                                 <span className="font-semibold text-slate-700 text-[13px]">{u.name}</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <code className="px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[11px] text-slate-500">{u.username}</code>
+                                        <td className="px-4 py-3 text-[13px] font-mono text-slate-500">
+                                            {u.email}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <Badge color={u.role === 'Admin' ? 'purple' : 'blue'} className="text-[9px] uppercase tracking-widest py-0.5 px-2 font-bold line-height-none">
@@ -215,14 +215,12 @@ export const AdminPanel = ({ currentUser, data, actions, setModal }) => {
                                                 >
                                                     <Icons.Edit className="w-4 h-4" />
                                                 </button>
-                                                {(u.username !== 'admin' || userProfiles.filter(p => p.username === 'admin').length > 1) && (
-                                                    <button
-                                                        onClick={() => { if (confirm('Permanently delete user?')) actions.del('users', u.id) }}
-                                                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
-                                                    >
-                                                        <Icons.X className="w-4 h-4" />
-                                                    </button>
-                                                )}
+                                                <button
+                                                    onClick={() => { if (confirm('Permanently delete user?')) actions.del('users', u.id) }}
+                                                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                                                >
+                                                    <Icons.X className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
