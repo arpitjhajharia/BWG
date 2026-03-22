@@ -178,9 +178,10 @@ const CompactOrderRow = ({ order, skus, products, actions, setModal, toggleOrder
 
 export const DetailDashboard = ({ detailView, setDetailView, data, actions, setModal, userProfiles, currentUser }) => {
     const { type, data: rawCompanyData } = detailView;
-    const companyData = rawCompanyData || {};
     const { contacts, tasks, quotesReceived, quotesSent, orders, products, skus } = data;
     const isVendor = type === 'vendor';
+    const liveItems = isVendor ? data.vendors : data.clients;
+    const companyData = liveItems.find(i => i.id === rawCompanyData?.id) || rawCompanyData || {};
 
     // Filters & Memos
     const relatedContacts = useMemo(() => companyData.id ? contacts.filter(c => c.companyId === companyData.id) : [], [contacts, companyData.id]);
@@ -391,22 +392,40 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
                                     >+ Add</button>
                                 </div>
                                 <div className="space-y-1">
-                                    {relatedContacts.map(c => (
-                                        <div
-                                            key={c.id}
-                                            className="group flex items-center justify-between p-2 hover:bg-slate-50 rounded-md transition-colors cursor-pointer border border-transparent hover:border-slate-100"
-                                            onClick={() => setModal({ open: true, type: 'contact', data: c, isEdit: true })}
-                                        >
-                                            <div className="min-w-0">
-                                                <div className="text-[12px] font-bold text-slate-900 truncate uppercase leading-tight group-hover:text-blue-600 transition-colors">{c.name}</div>
-                                                <div className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">{c.role || '--'}</div>
+                                    {relatedContacts.map(c => {
+                                        const isPrimary = companyData.primaryContactId === c.id;
+                                        return (
+                                            <div
+                                                key={c.id}
+                                                className={`group flex items-center justify-between p-2 hover:bg-slate-50 rounded-md transition-all cursor-pointer border ${isPrimary ? 'bg-blue-50/40 border-blue-100 shadow-sm' : 'border-transparent hover:border-slate-100'}`}
+                                                onClick={() => setModal({ open: true, type: 'contact', data: c, isEdit: true })}
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            actions.update(isVendor ? 'vendors' : 'clients', companyData.id, { primaryContactId: isPrimary ? null : c.id });
+                                                        }}
+                                                        className={`shrink-0 transition-all duration-300 transform active:scale-95 ${isPrimary ? 'opacity-100' : 'opacity-0 group-hover:opacity-40 hover:opacity-100'}`}
+                                                        title={isPrimary ? 'Unmark Primary' : 'Make Primary'}
+                                                    >
+                                                        <Icons.Star 
+                                                            fill={isPrimary ? 'currentColor' : 'none'}
+                                                            className={`w-3.5 h-3.5 ${isPrimary ? 'text-amber-400 drop-shadow-[0_0_2px_rgba(251,191,36,0.5)]' : 'text-slate-400 hover:text-amber-400'}`} 
+                                                        />
+                                                    </button>
+                                                    <div className="min-w-0">
+                                                        <div className={`text-[12px] font-bold truncate uppercase leading-tight group-hover:text-blue-600 transition-colors ${isPrimary ? 'text-blue-700' : 'text-slate-900'}`}>{c.name}</div>
+                                                        <div className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">{c.role || '--'}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
+                                                    {c.email && <a href={`mailto:${c.email}`} onClick={e => e.stopPropagation()} className="p-1 text-slate-400 hover:text-blue-600"><Icons.Mail className="w-3 h-3" /></a>}
+                                                    {c.phone && <a href={`tel:${c.phone}`} onClick={e => e.stopPropagation()} className="p-1 text-slate-400 hover:text-green-600"><Icons.Phone className="w-3 h-3" /></a>}
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
-                                                {c.email && <a href={`mailto:${c.email}`} onClick={e => e.stopPropagation()} className="p-1 text-slate-400 hover:text-blue-600"><Icons.Mail className="w-3 h-3" /></a>}
-                                                {c.phone && <a href={`tel:${c.phone}`} onClick={e => e.stopPropagation()} className="p-1 text-slate-400 hover:text-green-600"><Icons.Phone className="w-3 h-3" /></a>}
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                     {relatedContacts.length === 0 && <div className="py-6 text-center text-[10px] text-slate-400 uppercase tracking-widest italic opacity-60">None listed</div>}
                                 </div>
                             </div>

@@ -8,7 +8,7 @@ import { REQUIRED_DOCS, ORS_REQUIRED_DOCS, COUNTRIES } from '../../utils/constan
 
 export const AppModal = ({ modal, setModal, data, actions }) => {
 
-    const { products, skus, vendors, clients, userProfiles, quotesReceived, settings, formulations = [] } = data;
+    const { products, skus, vendors, clients, contacts, userProfiles, quotesReceived, settings, formulations = [] } = data;
 
     // --- SKU FILTERING (Ghost data, orphanded & duplicates) ---
     const cleanSkus = useMemo(() => {
@@ -438,6 +438,28 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                         </div>
                     </div>
 
+                    {/* Primary Contact Selector */}
+                    {modal.isEdit && (
+                        <div>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1 flex items-center gap-2">
+                                <Icons.Contact className="w-3 h-3 text-slate-400" /> Primary Contact
+                            </label>
+                            <select 
+                                className="w-full p-2 border border-slate-300 rounded text-[13px] text-slate-800 focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
+                                value={form.primaryContactId || ''}
+                                onChange={e => setForm({ ...form, primaryContactId: e.target.value })}
+                            >
+                                <option value="">Select Primary Contact...</option>
+                                {contacts.filter(c => c.companyId === form.id).map(c => (
+                                    <option key={c.id} value={c.id}>{c.name} {c.role ? `(${c.role})` : ''}</option>
+                                ))}
+                            </select>
+                            {contacts.filter(c => c.companyId === form.id).length === 0 && (
+                                <p className="text-[10px] text-slate-400 italic mt-1 px-1">No contacts found. Add contacts first via the company profile view.</p>
+                            )}
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Website</label>
@@ -448,7 +470,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             <input
                                 list="country-list-global"
                                 placeholder="Select Country..."
-                                className="w-full p-2 border border-slate-300 rounded text-[13px] text-slate-800 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                                className="w-full p-2 border border-slate-300 rounded text-[13px] text-slate-900 bg-white focus:ring-1 focus:ring-blue-500 outline-none transition-all"
                                 value={form.country || ''}
                                 onChange={e => setForm({ ...form, country: e.target.value })}
                             />
