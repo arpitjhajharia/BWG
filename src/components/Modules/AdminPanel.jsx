@@ -204,7 +204,7 @@ export const AdminPanel = ({ currentUser, data, actions, setModal }) => {
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <Badge color={u.role === 'Admin' ? 'purple' : 'blue'} className="text-[9px] uppercase tracking-widest py-0.5 px-2 font-bold line-height-none">
-                                                {u.role}
+                                                {u.role === 'Admin' ? 'Admin' : 'Staff'}
                                             </Badge>
                                         </td>
                                         <td className="px-4 py-3 text-right">

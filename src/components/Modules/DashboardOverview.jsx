@@ -40,11 +40,12 @@ const sortMonths = (a, b) => {
 export const DashboardOverview = ({ data, actions, setActiveTab }) => {
     const { products, clients, tasks, quotesSent, rfqs } = data;
 
-    // Calculate Revenue
-    const totalRevenue = quotesSent.reduce((acc, q) => acc + (parseFloat(q.sellingPrice || 0) * (parseFloat(q.moq || 0))), 0);
+    // Only count ACTIVE quotes in pipeline
+    const activeQuotes = quotesSent.filter(q => q.status === 'Active');
+    const totalRevenue = activeQuotes.reduce((acc, q) => acc + (parseFloat(q.sellingPrice || 0) * (parseFloat(q.moq || 0))), 0);
 
-    // Prepare Chart Data
-    const chartData = quotesSent.slice(0, 7).map(q => ({
+    // Prepare Chart Data (Forecast)
+    const chartData = activeQuotes.slice(0, 7).map(q => ({
         name: q.quoteId || 'N/A',
         value: parseFloat(q.sellingPrice || 0) * parseFloat(q.moq || 0)
     }));

@@ -20,7 +20,8 @@ export const useBiowearthData = () => {
         add: (col, item) => addDoc(collection(db, `artifacts/${appId}/public/data`, col), { ...item, createdAt: serverTimestamp() }),
         update: (col, id, item) => updateDoc(doc(db, `artifacts/${appId}/public/data`, col, id), item),
         set: (col, id, item) => setDoc(doc(db, `artifacts/${appId}/public/data`, col, id), { ...item, updatedAt: serverTimestamp() }),
-        del: (col, id) => confirm("Delete this record?") && deleteDoc(doc(db, `artifacts/${appId}/public/data`, col, id)),
+        del: (col, id) => deleteDoc(doc(db, `artifacts/${appId}/public/data`, col, id)),
+        delMany: (items) => Promise.all(items.map(item => deleteDoc(doc(db, `artifacts/${appId}/public/data`, item.col, item.id)))),
         updateSetting: (key, newList) => setDoc(doc(db, `artifacts/${appId}/public/data`, 'settings', key), { list: newList }),
 
         // Auth Actions
@@ -83,7 +84,7 @@ export const useBiowearthData = () => {
                     ...userData,
                     name: userData.name || user.displayName || user.email,
                     email: user.email,
-                    role: userData.role || 'User'
+                    role: userData.role || 'Staff'
                 };
 
                 setCurrentUser(profile);

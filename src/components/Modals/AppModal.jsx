@@ -1349,8 +1349,8 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                     </div>
                     <div>
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Access Level / Role</label>
-                        <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.role || ''} onChange={e => setForm({ ...form, role: e.target.value })}>
-                            <option value="User">Standard User</option>
+                        <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.role || 'Staff'} onChange={e => setForm({ ...form, role: e.target.value })}>
+                            <option value="Staff">Staff</option>
                             <option value="Admin">System Admin</option>
                         </select>
                     </div>

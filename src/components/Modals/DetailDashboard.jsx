@@ -176,7 +176,7 @@ const CompactOrderRow = ({ order, skus, products, actions, setModal, toggleOrder
     );
 };
 
-export const DetailDashboard = ({ detailView, setDetailView, data, actions, setModal, userProfiles }) => {
+export const DetailDashboard = ({ detailView, setDetailView, data, actions, setModal, userProfiles, currentUser }) => {
     const { type, data: rawCompanyData } = detailView;
     const companyData = rawCompanyData || {};
     const { contacts, tasks, quotesReceived, quotesSent, orders, products, skus } = data;
@@ -291,7 +291,50 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
                         <button onClick={generateCompanyPDF} className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors" title="Download PDF Profile"><Icons.File className="w-3.5 h-3.5" /></button>
                         <div className="w-px h-4 bg-slate-200 mx-2"></div>
                         <Button variant="secondary" size="sm" onClick={() => setModal({ open: true, type: isVendor ? 'vendor' : 'client', data: companyData, isEdit: true })} className="h-7 text-[10px] px-3">Edit Profile</Button>
-                        <button onClick={() => setDetailView({ open: false, type: null, data: null })} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><Icons.X className="w-4 h-4" /></button>
+                        {currentUser?.role === 'Admin' && (
+                            <Button
+                                variant="danger"
+                                size="sm"
+                                icon={Icons.Trash}
+                                onClick={async () => {
+                                    const { quotesSent = [], quotesReceived = [], rfqs = [], tasks = [] } = data;
+                                    const deps = {};
+
+                                    if (!isVendor) {
+                                        deps.quotesSent = quotesSent.filter(q => q.clientId === companyData.id).map(q => ({ col: 'quotesSent', id: q.id }));
+                                        deps.tasks = tasks.filter(t => (t.relatedId === companyData.id && t.contextType === 'Client') || t.secondaryClientId === companyData.id).map(t => ({ col: 'tasks', id: t.id }));
+                                    } else {
+                                        deps.quotesReceived = quotesReceived.filter(q => q.vendorId === companyData.id).map(q => ({ col: 'quotesReceived', id: q.id }));
+                                        deps.rfqs = rfqs.filter(r => r.vendorId === companyData.id).map(r => ({ col: 'rfqs', id: r.id }));
+                                        deps.tasks = tasks.filter(t => (t.relatedId === companyData.id && t.contextType === 'Vendor') || t.secondaryVendorId === companyData.id).map(t => ({ col: 'tasks', id: t.id }));
+                                    }
+
+                                    const allDeps = Object.values(deps).flat();
+
+                                    if (allDeps.length > 0) {
+                                        const summary = Object.entries(deps)
+                                            .filter(([_, arr]) => arr.length > 0)
+                                            .map(([name, arr]) => `${arr.length} ${name.replace(/([A-Z])/g, ' $1').trim()}`)
+                                            .join(', ');
+
+                                        if (confirm(`Deleting ${companyData.companyName} will also delete all associated: ${summary}. Proceed?`)) {
+                                            await actions.delMany([...allDeps, { col: isVendor ? 'vendors' : 'clients', id: companyData.id }]);
+                                            setDetailView({ open: false, type: null, data: null });
+                                        }
+                                    } else {
+                                        if (confirm(`Delete ${companyData.companyName}?`)) {
+                                            await actions.del(isVendor ? 'vendors' : 'clients', companyData.id);
+                                            setDetailView({ open: false, type: null, data: null });
+                                        }
+                                    }
+                                }}
+
+                                className="h-7 text-[10px] px-3 ml-1"
+                            >
+                                Delete
+                            </Button>
+                        )}
+                        <button onClick={() => setDetailView({ open: false, type: null, data: null })} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors ml-2"><Icons.X className="w-4 h-4" /></button>
                     </div>
                 </header>
 

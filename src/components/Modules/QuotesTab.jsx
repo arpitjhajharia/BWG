@@ -6,7 +6,7 @@ import { Badge } from '../ui/Badge';
 
 import { formatMoney } from '../../utils/helpers';
 
-export const QuotesTab = ({ data, actions, setModal }) => {
+export const QuotesTab = ({ data, actions, setModal, currentUser }) => {
     const { quotesReceived, quotesSent, vendors, clients, skus } = data;
     const [view, setView] = useState('purchase');
     const [searchTerm, setSearchTerm] = useState('');
@@ -15,6 +15,7 @@ export const QuotesTab = ({ data, actions, setModal }) => {
         const v = vendors.find(x => x.id === q.vendorId);
         const s = skus.find(x => x.id === q.skuId);
         const term = searchTerm.toLowerCase();
+        if (!term) return true;
         return (
             v?.companyName?.toLowerCase().includes(term) ||
             s?.name?.toLowerCase().includes(term) ||
@@ -26,6 +27,7 @@ export const QuotesTab = ({ data, actions, setModal }) => {
         const c = clients.find(x => x.id === q.clientId);
         const s = skus.find(x => x.id === q.skuId);
         const term = searchTerm.toLowerCase();
+        if (!term) return true;
         return (
             c?.companyName?.toLowerCase().includes(term) ||
             s?.name?.toLowerCase().includes(term) ||
@@ -118,7 +120,9 @@ export const QuotesTab = ({ data, actions, setModal }) => {
                                         <td className="px-2 py-1 text-right">
                                             <div className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button onClick={() => setModal({ open: true, type: 'quoteReceived', data: q, isEdit: true })} className="p-1 hover:bg-blue-100 rounded text-slate-400 hover:text-blue-600 transition-colors"><Icons.Edit className="w-3 h-3" /></button>
-                                                <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesReceived', q.id) }} className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600 transition-colors"><Icons.X className="w-3 h-3" /></button>
+                                                {currentUser?.role === 'Admin' && (
+                                                    <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesReceived', q.id) }} className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600 transition-colors"><Icons.X className="w-3 h-3" /></button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -215,7 +219,9 @@ export const QuotesTab = ({ data, actions, setModal }) => {
                                                 <td className="px-2 py-1 text-right">
                                                     <div className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <button onClick={() => setModal({ open: true, type: 'quoteSent', data: q, isEdit: true })} className="p-1 hover:bg-blue-100 rounded text-slate-400 hover:text-blue-600 transition-colors"><Icons.Edit className="w-3 h-3" /></button>
-                                                        <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesSent', q.id) }} className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600 transition-colors"><Icons.X className="w-3 h-3" /></button>
+                                                        {currentUser?.role === 'Admin' && (
+                                                            <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesSent', q.id) }} className="p-1 hover:bg-red-100 rounded text-slate-400 hover:text-red-600 transition-colors"><Icons.X className="w-3 h-3" /></button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -248,9 +254,11 @@ export const QuotesTab = ({ data, actions, setModal }) => {
                                         <button onClick={() => setModal({ open: true, type: 'quoteReceived', data: q, isEdit: true })} className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-50 rounded-lg">
                                             <Icons.Edit className="w-4 h-4" />
                                         </button>
-                                        <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesReceived', q.id) }} className="p-1.5 text-slate-400 hover:text-red-600 bg-slate-50 rounded-lg">
-                                            <Icons.Trash className="w-4 h-4" />
-                                        </button>
+                                        {currentUser?.role === 'Admin' && (
+                                            <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesReceived', q.id) }} className="p-1.5 text-slate-400 hover:text-red-600 bg-slate-50 rounded-lg">
+                                                <Icons.Trash className="w-4 h-4" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
@@ -307,9 +315,11 @@ export const QuotesTab = ({ data, actions, setModal }) => {
                                         <button onClick={() => setModal({ open: true, type: 'quoteSent', data: q, isEdit: true })} className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-50 rounded-lg">
                                             <Icons.Edit className="w-4 h-4" />
                                         </button>
-                                        <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesSent', q.id) }} className="p-1.5 text-slate-400 hover:text-red-600 bg-slate-50 rounded-lg">
-                                            <Icons.Trash className="w-4 h-4" />
-                                        </button>
+                                        {currentUser?.role === 'Admin' && (
+                                            <button onClick={() => { if (confirm('Delete quote?')) actions.del('quotesSent', q.id) }} className="p-1.5 text-slate-400 hover:text-red-600 bg-slate-50 rounded-lg">
+                                                <Icons.Trash className="w-4 h-4" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 

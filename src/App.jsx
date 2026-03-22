@@ -4,15 +4,15 @@ import { useBiowearthData } from './hooks/useBiowearthData';
 import { LoginScreen } from './components/LoginScreen';
 
 // Modules
-import { DashboardOverview } from './components/Modules/DashboardOverview';
-import { ProductMaster } from './components/Modules/ProductMaster';
-import { Formulations } from './components/Modules/Formulations';
-import { CompanyMaster } from './components/Modules/CompanyMaster';
-import { QuotesTab } from './components/Modules/QuotesTab';
-import { TaskBoard } from './components/Modules/TaskBoard';
-import { AdminPanel } from './components/Modules/AdminPanel';
-import { ORSMaster } from './components/Modules/ORSMaster';
-import { RFQMaster } from './components/Modules/RFQMaster';
+import { DashboardOverview } from './components/modules/DashboardOverview';
+import { ProductMaster } from './components/modules/ProductMaster';
+import { Formulations } from './components/modules/Formulations';
+import { CompanyMaster } from './components/modules/CompanyMaster';
+import { QuotesTab } from './components/modules/QuotesTab';
+import { TaskBoard } from './components/modules/TaskBoard';
+import { AdminPanel } from './components/modules/AdminPanel';
+import { ORSMaster } from './components/modules/ORSMaster';
+import { RFQMaster } from './components/modules/RFQMaster';
 import { Inventory } from './components/modules/Inventory';
 import { HelpCenter } from './components/modules/HelpCenter';
 
@@ -113,7 +113,7 @@ function App() {
             </div>
             <div className={`flex-1 min-w-0 transition-all duration-300 ${isSidebarHovered || isSidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden hidden'}`}>
               <div className="text-[12px] font-bold text-slate-800 truncate leading-tight">{currentUser?.name || currentUser?.email || 'User'}</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{currentUser?.role || 'User'}</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{currentUser?.role || 'Staff'}</div>
             </div>
             <button onClick={() => actions.logout()} className={`text-slate-300 hover:text-red-500 transition-all p-1 ${isSidebarHovered || isSidebarOpen ? '' : 'hidden'}`} title="Logout">
               <Icons.Logout className="w-4 h-4" />
@@ -134,13 +134,13 @@ function App() {
         <main className="flex-1 overflow-auto bg-slate-50/30 p-4 lg:p-6 scroller">
           <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
             {activeTab === 'dashboard' && <DashboardOverview data={data} actions={actions} setActiveTab={setActiveTab} />}
-            {activeTab === 'products' && <ProductMaster data={data} actions={actions} setModal={setModal} setActiveQuotesView={setActiveQuotesView} onNavigateToFormulation={handleFormulationNavigation} />}
+            {activeTab === 'products' && <ProductMaster data={data} actions={actions} setModal={setModal} setActiveQuotesView={setActiveQuotesView} onNavigateToFormulation={handleFormulationNavigation} currentUser={currentUser} />}
             {activeTab === 'formulations' && <Formulations data={data} actions={actions} setModal={setModal} targetFormulationId={targetFormulationId} />}
             {activeTab === 'ors' && <ORSMaster data={data} actions={actions} setModal={setModal} />}
             {activeTab === 'rfq' && <RFQMaster data={data} actions={actions} setModal={setModal} />}
-            {activeTab === 'vendors' && <CompanyMaster type="vendor" data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} />}
-            {activeTab === 'clients' && <CompanyMaster type="client" data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} />}
-            {activeTab === 'quotes' && <QuotesTab data={data} actions={actions} setModal={setModal} />}
+            {activeTab === 'vendors' && <CompanyMaster type="vendor" data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} currentUser={currentUser} />}
+            {activeTab === 'clients' && <CompanyMaster type="client" data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} currentUser={currentUser} />}
+            {activeTab === 'quotes' && <QuotesTab data={data} actions={actions} setModal={setModal} currentUser={currentUser} />}
             {activeTab === 'tasks' && <TaskBoard data={data} actions={actions} setModal={setModal} />}
             {activeTab === 'inventory' && <Inventory data={data} actions={actions} setModal={setModal} />}
             {activeTab === 'help' && <HelpCenter />}
@@ -150,7 +150,7 @@ function App() {
 
       </div>
 
-      <DetailDashboard detailView={detailView} setDetailView={setDetailView} data={data} actions={actions} setModal={setModal} userProfiles={data.userProfiles} />
+      <DetailDashboard detailView={detailView} setDetailView={setDetailView} data={data} actions={actions} setModal={setModal} userProfiles={data.userProfiles} currentUser={currentUser} />
       <ActiveQuotesModal activeQuotesView={activeQuotesView} setActiveQuotesView={setActiveQuotesView} data={data} />
       <AppModal modal={modal} setModal={setModal} data={data} actions={actions} currentUser={currentUser} />
 

@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import { FilterHeader } from '../shared/FilterHeader';
 import { formatDate } from '../../utils/helpers';
 
-export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) => {
+export const CompanyMaster = ({ type, data, actions, setModal, setDetailView, currentUser }) => {
     const { vendors, clients, skus, products, quotesReceived, quotesSent, tasks, settings } = data;
     const isVendor = type === 'vendor';
     const listData = isVendor ? vendors : clients;
@@ -130,6 +130,37 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
 
     const handleSort = (key) => {
         setSort(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
+    };
+
+    const handleDelete = async (item) => {
+        const { quotesSent = [], quotesReceived = [], rfqs = [], tasks = [] } = data;
+        const deps = {};
+
+        if (!isVendor) {
+            deps.quotesSent = quotesSent.filter(q => q.clientId === item.id).map(q => ({ col: 'quotesSent', id: q.id }));
+            deps.tasks = tasks.filter(t => (t.relatedId === item.id && t.contextType === 'Client') || t.secondaryClientId === item.id).map(t => ({ col: 'tasks', id: t.id }));
+        } else {
+            deps.quotesReceived = quotesReceived.filter(q => q.vendorId === item.id).map(q => ({ col: 'quotesReceived', id: q.id }));
+            deps.rfqs = rfqs.filter(r => r.vendorId === item.id).map(r => ({ col: 'rfqs', id: r.id }));
+            deps.tasks = tasks.filter(t => (t.relatedId === item.id && t.contextType === 'Vendor') || t.secondaryVendorId === item.id).map(t => ({ col: 'tasks', id: t.id }));
+        }
+
+        const allDeps = Object.values(deps).flat();
+
+        if (allDeps.length > 0) {
+            const summary = Object.entries(deps)
+                .filter(([_, arr]) => arr.length > 0)
+                .map(([name, arr]) => `${arr.length} ${name.replace(/([A-Z])/g, ' $1').trim()}`)
+                .join(', ');
+
+            if (confirm(`Deleting ${item.companyName} will also delete all associated: ${summary}. Proceed?`)) {
+                await actions.delMany([...allDeps, { col: isVendor ? 'vendors' : 'clients', id: item.id }]);
+            }
+        } else {
+            if (confirm(`Delete ${item.companyName}?`)) {
+                await actions.del(isVendor ? 'vendors' : 'clients', item.id);
+            }
+        }
     };
 
     const StatusBadge = ({ item }) => {
@@ -260,7 +291,7 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
                                             <FilterHeader label={isVendor ? 'Onboarded' : 'Lead Date'} sortKey={isVendor ? 'createdAt' : 'leadDate'} currentSort={sort} onSort={handleSort} filterType="text" filterValue={colFilters.date} onFilter={v => setColFilters(p => ({ ...p, date: v }))} />
                                         </th>
                                     )}
-                                    <th className="w-8 bg-slate-50/50"></th>
+                                    <th className="w-32 bg-slate-50/50"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -332,10 +363,29 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
                                                 </span>
                                             </td>
                                         )}
-                                        <td className="px-1 py-1.5 text-right">
-                                            <button className="p-1 text-slate-300 hover:text-blue-500 transition-colors">
-                                                <Icons.ChevronRight className="w-4 h-4" />
-                                            </button>
+                                        <td className="px-1 py-1.5 text-right relative">
+                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setModal({ open: true, type, data: item, isEdit: true }) }}
+                                                    className="p-1 px-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100/50 rounded transition-all"
+                                                    title="Edit"
+                                                >
+                                                    <Icons.Edit className="w-3.5 h-3.5" />
+                                                </button>
+                                                {currentUser?.role === 'Admin' && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
+                                                        className="p-1 px-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                                                        title="Delete"
+                                                    >
+                                                        <Icons.Trash className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                                <div className="w-px h-3 bg-slate-200 mx-0.5"></div>
+                                                <button className="p-1 text-slate-300 group-hover:text-blue-500 transition-colors">
+                                                    <Icons.ChevronRight className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -383,7 +433,10 @@ export const CompanyMaster = ({ type, data, actions, setModal, setDetailView }) 
                                                     >
                                                         <div className="flex justify-between items-start mb-2">
                                                             <h4 className="font-bold text-slate-700 text-[13px] line-clamp-2 leading-snug tracking-tight">{item.companyName}</h4>
-                                                            <button onClick={(e) => { e.stopPropagation(); setModal({ open: true, type, data: item, isEdit: true }) }} className="p-1 text-slate-300 hover:text-blue-500 transition-colors"><Icons.Edit className="w-3 h-3" /></button>
+                                                            <div className="flex items-center gap-0.5">
+                                                                <button onClick={(e) => { e.stopPropagation(); setModal({ open: true, type, data: item, isEdit: true }) }} className="p-1.5 text-slate-300 hover:text-blue-500 hover:bg-slate-50 rounded transition-all" title="Edit"><Icons.Edit className="w-3 h-3" /></button>
+                                                                {currentUser?.role === 'Admin' && <button onClick={(e) => { e.stopPropagation(); handleDelete(item); }} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-all" title="Delete"><Icons.Trash className="w-3 h-3" /></button>}
+                                                            </div>
                                                         </div>
 
                                                         <div className="flex items-center gap-2 mb-3">

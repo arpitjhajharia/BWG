@@ -7,7 +7,7 @@ import { Badge } from '../ui/Badge';
 import { formatMoney } from '../../utils/helpers';
 
 // Added onNavigateToFormulation prop
-export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, onNavigateToFormulation }) => {
+export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, onNavigateToFormulation, currentUser }) => {
     // Destructure formulations to use in PDF generation
     const { products, skus, vendors, quotesReceived, quotesSent, settings, formulations = [] } = data;
 
@@ -211,17 +211,37 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setModal({ open: true, type: 'product', data: p, isEdit: true }) }}
                                         className="p-1 text-slate-300 hover:text-blue-600 transition-all rounded hover:bg-white"
+                                        title="Edit Product"
                                     >
                                         <Icons.Edit className="w-3.5 h-3.5" />
                                     </button>
-                                    <div className={`text-slate-300 transition-all duration-300 p-0.5 ${isExpanded ? 'rotate-180 text-blue-500 bg-white rounded-full shadow-sm' : ''}`}>
+                                    {currentUser?.role === 'Admin' && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (pSkus.length > 0) {
+                                                    alert(`Cannot delete product "${p.name}" because it still has ${pSkus.length} SKU(s). Please delete all SKUs first.`);
+                                                    return;
+                                                }
+                                                if (confirm(`Delete product "${p.name}"?`)) {
+                                                    actions.del('products', p.id);
+                                                }
+                                            }}
+                                            className="p-1 text-slate-300 hover:text-red-500 transition-all rounded hover:bg-white"
+                                            title="Delete Product"
+                                        >
+                                            <Icons.Trash className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                    <div className={`text-slate-300 transition-all duration-300 p-0.5 ml-1 ${isExpanded ? 'rotate-180 text-blue-500 bg-white rounded-full shadow-sm' : ''}`}>
                                         <Icons.ChevronDown className="w-3.5 h-3.5" />
                                     </div>
                                 </div>
+
                             </div>
                             {isExpanded && (
                                 <div className="border-t border-slate-100 bg-slate-50/40 px-3 py-2 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -273,7 +293,42 @@ export const ProductMaster = ({ data, actions, setModal, setActiveQuotesView, on
                                                                         <button onClick={(e) => generateSkuPdf(e, s)} className="p-1 bg-white border border-slate-200 rounded text-green-500 hover:border-green-300 hover:bg-green-50 transition-all" title="Technical Datasheet"><Icons.File className="w-3 h-3" /></button>
                                                                         <button onClick={() => onNavigateToFormulation(s.id)} className="p-1 bg-white border border-slate-200 rounded text-purple-500 hover:border-purple-300 hover:bg-purple-50 transition-all" title="Formulation / BOM"><Icons.List className="w-3 h-3" /></button>
                                                                         <button onClick={() => setModal({ open: true, type: 'sku', data: s, isEdit: true })} className="p-1 bg-white border border-slate-200 rounded text-blue-500 hover:border-blue-300 hover:bg-blue-50 transition-all" title="Settings"><Icons.Edit className="w-3 h-3" /></button>
-                                                                        <button onClick={() => { if (confirm('Delete SKU configuration?')) actions.del('skus', s.id) }} className="p-1 bg-white border border-slate-200 rounded text-red-400 hover:border-red-300 hover:bg-red-50 transition-all" title="Remove"><Icons.X className="w-3 h-3" /></button>
+                                                                {currentUser?.role === 'Admin' && (
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            const { formulations = [], rfqs = [], quotesReceived = [], quotesSent = [], inventoryInwards = [], inventoryOutwards = [] } = data;
+                                                                            const deps = {
+                                                                                formulations: formulations.filter(f => f.skuId === s.id).map(f => ({ col: 'formulations', id: f.id, label: 'Formulation' })),
+                                                                                quotesReceived: quotesReceived.filter(q => q.skuId === s.id).map(q => ({ col: 'quotesReceived', id: q.id, label: 'Purchase Quote' })),
+                                                                                quotesSent: quotesSent.filter(q => q.skuId === s.id).map(q => ({ col: 'quotesSent', id: q.id, label: 'Sales Quote' })),
+                                                                                rfqs: rfqs.filter(r => r.skuId === s.id).map(r => ({ col: 'rfqs', id: r.id, label: 'RFQ' })),
+                                                                                inventoryInwards: inventoryInwards.filter(i => i.skuId === s.id).map(i => ({ col: 'inventoryInwards', id: i.id, label: 'Inventory In' })),
+                                                                                inventoryOutwards: inventoryOutwards.filter(i => i.skuId === s.id).map(i => ({ col: 'inventoryOutwards', id: i.id, label: 'Inventory Out' }))
+                                                                            };
+
+                                                                            const allDeps = Object.values(deps).flat();
+
+                                                                            if (allDeps.length > 0) {
+                                                                                const summary = Object.entries(deps)
+                                                                                    .filter(([_, arr]) => arr.length > 0)
+                                                                                    .map(([name, arr]) => `${arr.length} ${name.replace(/([A-Z])/g, ' $1').trim()}`)
+                                                                                    .join(', ');
+
+                                                                                if (confirm(`Deleting SKU "${s.variant}" will also delete all its dependent records: ${summary}. Proceed?`)) {
+                                                                                    await actions.delMany([...allDeps, { col: 'skus', id: s.id }]);
+                                                                                }
+                                                                            } else {
+                                                                                if (confirm(`Delete SKU configuration "${s.variant}"?`)) {
+                                                                                    await actions.del('skus', s.id);
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                        className="p-1 bg-white border border-slate-200 rounded text-red-500 hover:border-red-300 hover:bg-red-50 transition-all shadow-sm"
+                                                                        title="Remove SKU and all dependencies"
+                                                                    >
+                                                                        <Icons.Trash className="w-3 h-3" />
+                                                                    </button>
+                                                                )}
                                                                     </div>
                                                                 </td>
                                                             </tr>
