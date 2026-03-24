@@ -136,6 +136,40 @@ const LeadStatusGroupCard = ({ statuses, groups, actions }) => {
     );
 };
 
+const CurrencySettingsCard = ({ rate = 0, actions }) => {
+    const [val, setVal] = useState(rate);
+    const save = () => {
+        actions.setSetting('usdToInrRate', parseFloat(val) || 0);
+        alert('Exchange rate updated.');
+    };
+    return (
+        <div className="bg-white border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+            <div className="bg-slate-50 px-3 py-2 border-b border-slate-200">
+                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Exchange Rates</h3>
+            </div>
+            <div className="p-3 space-y-3">
+                <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">1 USD to INR</label>
+                    <div className="flex gap-1.5">
+                        <input
+                            type="number"
+                            step="0.01"
+                            className="border border-slate-300 rounded text-[13px] p-1.5 flex-1 focus:ring-1 focus:ring-blue-500 outline-none font-mono"
+                            placeholder="e.g. 83.50"
+                            value={val}
+                            onChange={e => setVal(e.target.value)}
+                        />
+                        <button
+                            onClick={save}
+                            className="px-3 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 transition-colors shadow-sm"
+                        >OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const AdminPanel = ({ currentUser, data, actions, setModal }) => {
     const [subTab, setSubTab] = useState('users');
     const { userProfiles, settings } = data;
@@ -244,6 +278,7 @@ export const AdminPanel = ({ currentUser, data, actions, setModal }) => {
                         <LeadStatusGroupCard statuses={settings.leadStatuses || []} groups={settings.leadStatusGroups || {}} actions={actions} />
                         <SettingsCard title="Task Groups" settingKey="taskGroups" items={settings.taskGroups} actions={actions} />
                         <SettingsCard title="Vendor Status" settingKey="vendorStatuses" items={settings.vendorStatuses} actions={actions} />
+                        <CurrencySettingsCard rate={settings.usdToInrRate} actions={actions} />
                     </div>
                 </div>
             )}

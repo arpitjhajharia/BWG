@@ -7,7 +7,8 @@ import { Badge } from '../ui/Badge';
 import { formatMoney } from '../../utils/helpers';
 
 export const QuotesTab = ({ data, actions, setModal, currentUser }) => {
-    const { quotesReceived, quotesSent, vendors, clients, skus } = data;
+    const { quotesReceived, quotesSent, vendors, clients, skus, settings } = data;
+    const usdToInr = parseFloat(settings?.usdToInrRate) || 1;
     const [view, setView] = useState('purchase');
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -168,8 +169,20 @@ export const QuotesTab = ({ data, actions, setModal, currentUser }) => {
                                         const s = skus.find(x => x.id === q.skuId);
                                         const baseQuote = quotesReceived.find(bq => bq.id === q.baseCostId);
                                         const baseVendor = vendors.find(v => v.id === baseQuote?.vendorId);
+                                        
+                                        // Normalize Cost based on currency mismatch
+                                        let normalizedCost = q.baseCostPrice || 0;
+                                        const costCurr = q.baseCostCurrency || 'INR';
+                                        const sellCurr = q.currency || 'INR';
+                                        
+                                        if (sellCurr === 'USD' && costCurr === 'INR') {
+                                            normalizedCost = (q.baseCostPrice || 0) / usdToInr;
+                                        } else if (sellCurr === 'INR' && costCurr === 'USD') {
+                                            normalizedCost = (q.baseCostPrice || 0) * usdToInr;
+                                        }
+
                                         const totalRevenue = q.sellingPrice * q.moq;
-                                        const totalCost = q.baseCostPrice * q.moq;
+                                        const totalCost = normalizedCost * q.moq;
                                         const totalMargin = totalRevenue - totalCost;
                                         const marginPct = totalCost ? ((totalMargin / totalCost) * 100).toFixed(1) : 0;
                                         const isFirst = idx === 0;
@@ -193,20 +206,20 @@ export const QuotesTab = ({ data, actions, setModal, currentUser }) => {
                                                 ) : null}
                                                 <td className="px-2 py-1 text-[11px] font-medium text-slate-600 truncate max-w-[180px]" title={s?.name}>{s?.name || 'Unknown SKU'}</td>
                                                 <td className="px-2 py-1 text-right font-mono text-slate-600">{q.moq}</td>
-                                                <td className="px-2 py-1 text-right font-semibold text-slate-700 whitespace-nowrap">{formatMoney(q.sellingPrice)}</td>
-                                                <td className="px-2 py-1 text-right font-bold text-blue-600 whitespace-nowrap">{formatMoney(totalRevenue)}</td>
+                                                <td className="px-2 py-1 text-right font-semibold text-slate-700 whitespace-nowrap">{formatMoney(q.sellingPrice, q.currency)}</td>
+                                                <td className="px-2 py-1 text-right font-bold text-blue-600 whitespace-nowrap">{formatMoney(totalRevenue, q.currency)}</td>
                                                 <td className="px-2 py-1 text-center">
                                                     <span className={`text-[8px] font-bold uppercase tracking-wider px-1 py-px rounded border ${q.status === 'Active' ? 'text-green-700 bg-green-50 border-green-100' : q.status === 'Closed' ? 'text-slate-500 bg-slate-50 border-slate-200' : 'text-yellow-700 bg-yellow-50 border-yellow-100'}`}>
                                                         {q.status || 'Draft'}
                                                     </span>
                                                 </td>
-                                                <td className="px-2 py-1 whitespace-nowrap">
+                                                <td className="px-2 py-1 whitespace-nowrap text-[11px]">
                                                     {baseQuote ? (
-                                                        <span className="text-[11px] text-slate-600"><span className="font-semibold">{baseVendor?.companyName}</span> <span className="text-slate-400">@ {formatMoney(baseQuote.price)}</span></span>
+                                                        <span className="text-slate-600"><span className="font-semibold">{baseVendor?.companyName}</span> <span className="text-slate-400 font-mono">@ {formatMoney(q.baseCostPrice, costCurr)}</span></span>
                                                     ) : <span className="text-[9px] font-bold text-yellow-600 bg-yellow-50 px-1 py-px rounded border border-yellow-100">No Base</span>}
                                                 </td>
                                                 <td className="px-2 py-1 text-right whitespace-nowrap">
-                                                    <span className={`font-bold font-mono text-[11px] ${marginPct > 20 ? 'text-green-600' : marginPct > 10 ? 'text-yellow-600' : 'text-red-600'}`}>{formatMoney(totalMargin)}</span>
+                                                    <span className={`font-bold font-mono text-[11px] ${marginPct > 20 ? 'text-green-600' : marginPct > 10 ? 'text-yellow-600' : 'text-red-600'}`}>{formatMoney(totalMargin, q.currency)}</span>
                                                     <span className="text-[9px] text-slate-400 ml-1">{marginPct}%</span>
                                                 </td>
                                                 <td className="px-2 py-1 text-center">

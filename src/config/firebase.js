@@ -18,9 +18,8 @@ const app = initializeApp(firebaseConfig);
 if (import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
     // For local development, enable debug mode if needed
     if (import.meta.env.DEV) {
-        // You can set this to true to generate a new token in the console, 
-        // OR set it to your explicit debug token string from Firebase Console.
-        self.FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.VITE_FIREBASE_DEBUG_TOKEN || "0b90f23b-6d56-407e-9b20-678aa5e24fa2";
+        // Generate a new token in the browser console for manual whitelisting
+        self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
     }
 
     initializeAppCheck(app, {

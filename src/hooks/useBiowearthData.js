@@ -23,6 +23,7 @@ export const useBiowearthData = () => {
         del: (col, id) => deleteDoc(doc(db, `artifacts/${appId}/public/data`, col, id)),
         delMany: (items) => Promise.all(items.map(item => deleteDoc(doc(db, `artifacts/${appId}/public/data`, item.col, item.id)))),
         updateSetting: (key, newList) => setDoc(doc(db, `artifacts/${appId}/public/data`, 'settings', key), { list: newList }),
+        setSetting: (key, newVal) => setDoc(doc(db, `artifacts/${appId}/public/data`, 'settings', key), { value: newVal }),
 
         // Auth Actions
         login: async (email, password) => {
@@ -110,8 +111,11 @@ export const useBiowearthData = () => {
                     }),
                     onSnapshot(collection(db, path, 'settings'), s => {
                         const newSettings = {};
-                        s.docs.forEach(d => { newSettings[d.id] = d.data().list || []; });
-                        setData(p => ({ ...p, settings: { ...p.settings, ...newSettings } }));
+                        s.docs.forEach(d => { 
+                            const sv = d.data();
+                            newSettings[d.id] = sv.list !== undefined ? sv.list : (sv.value !== undefined ? sv.value : sv);
+                        });
+                        setData(p => ({ ...p, settings: newSettings }));
                     })
                 ];
                 setLoading(false);

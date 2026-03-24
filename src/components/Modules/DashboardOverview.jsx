@@ -38,17 +38,68 @@ const sortMonths = (a, b) => {
 };
 
 export const DashboardOverview = ({ data, actions, setActiveTab }) => {
-    const { products, skus, clients, tasks, quotesSent, rfqs, orders } = data;
+    const { products, skus, clients, tasks, quotesSent, rfqs, orders, vendors } = data;
+
+    const usdRate = parseFloat(data.settings?.usdToInrRate) || 1;
+    const normalize = (val, currency) => currency === 'USD' ? val * usdRate : val;
 
     // Only count ACTIVE quotes in pipeline
     const activeQuotes = quotesSent.filter(q => q.status === 'Active');
-    const totalRevenue = activeQuotes.reduce((acc, q) => acc + (parseFloat(q.sellingPrice || 0) * (parseFloat(q.moq || 0))), 0);
+    const totalPipeline = activeQuotes.reduce((acc, q) => acc + normalize(parseFloat(q.sellingPrice || 0) * (parseFloat(q.moq || 0)), q.currency), 0);
 
-    // Prepare Chart Data (Forecast)
-    const chartData = activeQuotes.slice(0, 7).map(q => ({
-        name: q.quoteId || 'N/A',
-        value: parseFloat(q.sellingPrice || 0) * parseFloat(q.moq || 0)
-    }));
+    const clientPOs = (orders || []).filter(o => clients.some(c => c.id === o.companyId));
+    const vendorPOs = (orders || []).filter(o => vendors.some(v => v.id === o.companyId));
+
+    // Lifetime Revenue: Total sum of all order lines
+    const lifetimeRev = clientPOs.reduce((acc, o) => acc + normalize(parseFloat(o.amount || 0), o.currency || 'INR'), 0);
+
+    // Payment Received: Group by Order ID to avoid multi-line double counting
+    const clientOrderPayments = {};
+    clientPOs.forEach(o => {
+        const key = `${o.companyId}_${o.orderId || o.id}`;
+        if (!clientOrderPayments[key]) {
+            let paid = 0;
+            (o.paymentTerms || []).forEach(t => paid += (parseFloat(t.paidBase) || 0) + (parseFloat(t.paidTax) || 0));
+            clientOrderPayments[key] = normalize(paid, o.currency || 'INR');
+        }
+    });
+    const paidRev = Object.values(clientOrderPayments).reduce((sum, val) => sum + val, 0);
+    const pendingRev = lifetimeRev - paidRev;
+
+    // Payment Payable: Total sum of all vendor lines - Total paid to vendors
+    const lifetimeExp = vendorPOs.reduce((acc, o) => acc + normalize(parseFloat(o.amount || 0), o.currency || 'INR'), 0);
+    const vendorOrderPayments = {};
+    vendorPOs.forEach(o => {
+        const key = `${o.companyId}_${o.orderId || o.id}`;
+        if (!vendorOrderPayments[key]) {
+            let paid = 0;
+            (o.paymentTerms || []).forEach(t => paid += (parseFloat(t.paidBase) || 0) + (parseFloat(t.paidTax) || 0));
+            vendorOrderPayments[key] = normalize(paid, o.currency || 'INR');
+        }
+    });
+    const paidExp = Object.values(vendorOrderPayments).reduce((sum, val) => sum + val, 0);
+    const pendingExp = lifetimeExp - paidExp;
+
+    // Prepare Chart Data (Forecast) - Stacked by Client
+    const forecastData = useMemo(() => {
+        const clientData = {};
+        const allQuoteIds = new Set();
+        
+        activeQuotes.forEach(q => {
+            const client = clients.find(c => c.id === q.clientId);
+            const name = client?.companyName?.split(' ')[0] || client?.companyName || 'Unknown';
+            const quoteKey = q.quoteId || q.id;
+            allQuoteIds.add(quoteKey);
+            
+            if (!clientData[name]) clientData[name] = { name, total: 0 };
+            const val = normalize(parseFloat(q.sellingPrice || 0) * parseFloat(q.moq || 0), q.currency);
+            clientData[name][quoteKey] = (clientData[name][quoteKey] || 0) + val;
+            clientData[name].total += val;
+        });
+
+        const data = Object.values(clientData).sort((a, b) => b.total - a.total);
+        return { data, quoteIds: Array.from(allQuoteIds) };
+    }, [activeQuotes, clients, usdRate]);
 
     // Prepare Leads by Source Chart Data (monthly breakdown)
     const leadsBySourceData = useMemo(() => {
@@ -139,7 +190,7 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
             if (!monthYear) return;
             
             if (!monthData[monthYear]) monthData[monthYear] = 0;
-            monthData[monthYear] += parseFloat(po.amount || 0);
+            monthData[monthYear] += normalize(parseFloat(po.amount || 0), po.currency);
         });
 
         const sortedMonths = Object.keys(monthData).sort(sortMonths);
@@ -156,11 +207,12 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 border border-slate-200 rounded">Real-time Overview</div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <StatCard title="Active Products" value={products.length} icon={Icons.Product} color="blue" />
-                <StatCard title="Active Clients" value={clients.filter(c => c.status === 'Active').length} icon={Icons.Users} color="green" />
-                <StatCard title="Pending Tasks" value={tasks.filter(t => t.status !== 'Completed').length} icon={Icons.Task} color="red" />
-                <StatCard title="Total Pipeline" value={formatMoney(totalRevenue)} icon={Icons.Money} color="purple" />
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <StatCard title="Total Pipeline" value={formatMoney(totalPipeline)} icon={Icons.Money} />
+                <StatCard title="Lifetime Revenue" value={formatMoney(lifetimeRev)} icon={Icons.Money} />
+                <StatCard title="Payment Received" value={formatMoney(paidRev)} icon={Icons.Money} />
+                <StatCard title="Payment Receivable" value={formatMoney(pendingRev)} icon={Icons.Money} />
+                <StatCard title="Payment Payable" value={formatMoney(pendingExp)} icon={Icons.Money} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -170,7 +222,7 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                     </div>
                     <div className="p-4 h-72">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <BarChart data={forecastData.data} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis
                                     dataKey="name"
@@ -189,6 +241,7 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                                 />
                                 <Tooltip
                                     cursor={{ fill: 'transparent' }}
+                                    formatter={(val, name) => [formatMoney(val), name]}
                                     contentStyle={{
                                         borderRadius: '4px',
                                         border: '1px solid #e2e8f0',
@@ -197,12 +250,18 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                                         fontWeight: 'bold'
                                     }}
                                 />
-                                <Bar
-                                    dataKey="value"
-                                    fill="#3b82f6"
-                                    radius={[2, 2, 0, 0]}
-                                    barSize={32}
-                                />
+                                {forecastData.quoteIds.map((quoteId, idx) => (
+                                    <Bar
+                                        key={quoteId}
+                                        dataKey={quoteId}
+                                        stackId="quoteStack"
+                                        fill={CHART_COLORS[idx % CHART_COLORS.length]}
+                                        radius={idx === forecastData.quoteIds.length - 1 ? [2, 2, 0, 0] : [0, 0, 0, 0]}
+                                        barSize={32}
+                                    >
+                                        {idx === forecastData.quoteIds.length - 1 && <LabelList dataKey="total" position="top" formatter={(v) => `₹${(v / 1000).toFixed(1)}k`} fontSize={10} fontWeight="bold" fill="#475569" offset={8} />}
+                                    </Bar>
+                                ))}
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -275,7 +334,7 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                     <div className="p-4 h-72">
                         {leadsBySourceData.data.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={leadsBySourceData.data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <BarChart data={leadsBySourceData.data} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis
                                         dataKey="month"
@@ -350,7 +409,7 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                     <div className="p-4 h-72">
                         {leadsByFormatData.data.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={leadsByFormatData.data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <BarChart data={leadsByFormatData.data} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis
                                         dataKey="month"

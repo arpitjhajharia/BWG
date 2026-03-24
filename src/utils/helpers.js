@@ -11,6 +11,7 @@ export const formatMoney = (amount, currency = 'INR') => {
     return new Intl.NumberFormat('en-IN', {
         style: 'currency',
         currency: currency,
-        maximumFractionDigits: 0
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 0
     }).format(num);
 };

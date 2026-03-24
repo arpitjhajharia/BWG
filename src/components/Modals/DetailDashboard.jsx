@@ -63,15 +63,25 @@ const CompactTaskRow = ({ task, crud, userProfiles, setModal }) => {
 };
 
 // --- Local Compact Order Component ---
-const CompactOrderRow = ({ order, skus, products, actions, setModal, toggleOrderPayment, updateOrderDoc, isVendor }) => {
+const CompactOrderRow = ({ order, skus, products, actions, setModal, updateOrderPayment, resetOrderPayment, updateOrderDoc, isVendor, settings }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    
+    // Currency Normalization for Margin
+    const usdRate = parseFloat(settings?.usdToInrRate) || 1;
+    let normalizedCost = order.baseCostPrice || 0;
+    if (order.currency === 'USD' && (order.baseCostCurrency === 'INR' || !order.baseCostCurrency)) {
+        normalizedCost = (order.baseCostPrice || 0) / usdRate;
+    } else if (order.currency === 'INR' && order.baseCostCurrency === 'USD') {
+        normalizedCost = (order.baseCostPrice || 0) * usdRate;
+    }
+
     const sku = skus.find(x => x.id === order.skuId);
     const product = products.find(x => x.id === sku?.productId);
     const docReqs = order.docRequirements || {};
 
     // Calculate Rate and Margin
     const unitRate = order.rate || (order.amount / (order.qty || 1));
-    const totalMargin = !isVendor ? (order.amount - (order.baseCostPrice * order.qty)) : null;
+    const totalMargin = !isVendor ? (order.amount - (normalizedCost * order.qty)) : null;
 
     return (
         <div className="border-b border-slate-100 last:border-0 py-2">
@@ -100,17 +110,17 @@ const CompactOrderRow = ({ order, skus, products, actions, setModal, toggleOrder
                 <div className="text-right flex items-center gap-8 min-w-[200px]">
                     <div className="flex flex-col items-end">
                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter leading-none mb-1">Rate</span>
-                        <span className="text-[12px] font-bold text-slate-700">{formatMoney(unitRate)}</span>
+                        <span className="text-[12px] font-bold text-slate-700">{formatMoney(unitRate, order.currency)}</span>
                     </div>
                     {!isVendor && totalMargin !== null && (
                         <div className="flex flex-col items-end">
                             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter leading-none mb-1">Margin</span>
-                            <span className={`text-[12px] font-bold ${totalMargin >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatMoney(totalMargin)}</span>
+                            <span className={`text-[12px] font-bold ${totalMargin >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatMoney(totalMargin, order.currency)}</span>
                         </div>
                     )}
                     <div className="flex flex-col items-end">
                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter leading-none mb-1">Total</span>
-                        <span className="text-[13px] font-bold text-slate-900">{formatMoney(order.amount)}</span>
+                        <span className="text-[13px] font-bold text-slate-900">{formatMoney(order.amount, order.currency)}</span>
                     </div>
                 </div>
 
@@ -123,21 +133,67 @@ const CompactOrderRow = ({ order, skus, products, actions, setModal, toggleOrder
                 <div className="ml-10 mt-3 mb-4 grid grid-cols-2 gap-8 text-[11px] animate-fade-in bg-slate-50/30 p-4 rounded-lg border border-slate-50">
                     <div>
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">Payment Milestones</p>
-                        <div className="space-y-0.5">
-                            {(order.paymentTerms || []).map((term, i) => (
-                                <div key={i} className="flex justify-between items-center px-1.5 py-1.5 rounded-md hover:bg-white transition-colors border border-transparent hover:border-slate-100 shadow-sm-hover">
-                                    <span className="text-slate-600 uppercase tracking-tight font-medium">{term.label} ({term.percent}%)</span>
-                                    <div className="flex items-center gap-4">
-                                        <span className="font-mono text-slate-700 font-bold">{formatMoney((order.amount * term.percent) / 100)}</span>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); toggleOrderPayment(order, i); }}
-                                            className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded ${term.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-700'}`}
-                                        >
-                                            {term.status === 'Paid' ? 'Paid✓' : 'Mark Paid'}
-                                        </button>
+                        <div className="space-y-1">
+                            {(order.paymentTerms || []).map((term, i) => {
+                                const mPercent = term.percent / 100;
+                                const mBase = (order.amount - (order.taxAmount || 0)) * mPercent;
+                                const mTax = (order.taxAmount || 0) * mPercent;
+                                const mTotal = order.amount * mPercent;
+                                
+                                const pBase = parseFloat(term.paidBase || 0);
+                                const pTax = parseFloat(term.paidTax || 0);
+                                const pTotal = pBase + pTax;
+                                const isDone = pTotal >= (mTotal - 1); // Allow 1 unit rounding difference
+
+                                return (
+                                    <div key={i} className="bg-white/50 border border-slate-100 rounded-md p-2 space-y-2 group/term relative">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-tight">{term.label} ({term.percent}%)</span>
+                                                <span className="text-[9px] text-slate-400 font-bold uppercase tabular-nums">Total: {formatMoney(mTotal, order.currency)}</span>
+                                            </div>
+                                            {isDone ? (
+                                                <div className="flex items-center gap-1.5 bg-green-50 text-green-600 px-2 py-0.5 rounded border border-green-100">
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider">RECEIVED✓</span>
+                                                    <button onClick={(e) => { e.stopPropagation(); resetOrderPayment(order, i); }} className="p-0.5 hover:bg-green-100 rounded opacity-0 group-hover/term:opacity-100 transition-opacity"><Icons.X className="w-2.5 h-2.5" /></button>
+                                                </div>
+                                            ) : (
+                                                <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 uppercase tracking-wider">Pending</span>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-50">
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between items-center text-[8px] font-bold text-slate-400 uppercase">
+                                                    <span>Base ({formatMoney(mBase, order.currency)})</span>
+                                                    {pBase > 0 && <span className="text-green-600">Paid: {formatMoney(pBase, order.currency)}</span>}
+                                                </div>
+                                                <input 
+                                                    type="number" 
+                                                    placeholder={`Target: ${mBase.toFixed(2)}`}
+                                                    className="w-full text-[10px] p-1 border border-slate-200 rounded focus:border-blue-400 outline-none bg-white font-mono"
+                                                    value={term.paidBase || ''}
+                                                    onChange={(e) => updateOrderPayment(order, i, 'paidBase', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between items-center text-[8px] font-bold text-slate-400 uppercase">
+                                                    <span>Tax ({formatMoney(mTax, order.currency)})</span>
+                                                    {pTax > 0 && <span className="text-green-600">Paid: {formatMoney(pTax, order.currency)}</span>}
+                                                </div>
+                                                <input 
+                                                    type="number" 
+                                                    placeholder={`Target: ${mTax.toFixed(2)}`}
+                                                    className="w-full text-[10px] p-1 border border-slate-200 rounded focus:border-blue-400 outline-none bg-white font-mono"
+                                                    value={term.paidTax || ''}
+                                                    onChange={(e) => updateOrderPayment(order, i, 'paidTax', e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="text-[8px] italic text-slate-400 px-1">Values update in real-time. Status auto-completes on full payment.</div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                     <div>
@@ -178,8 +234,13 @@ const CompactOrderRow = ({ order, skus, products, actions, setModal, toggleOrder
 
 export const DetailDashboard = ({ detailView, setDetailView, data, actions, setModal, userProfiles, currentUser }) => {
     const { type, data: rawCompanyData } = detailView;
-    const { contacts, tasks, quotesReceived, quotesSent, orders, products, skus } = data;
+    const { contacts, tasks, quotesReceived, quotesSent, orders, products, skus, settings } = data;
     const isVendor = type === 'vendor';
+    
+    // Currency Normalization
+    const usdRate = parseFloat(settings?.usdToInrRate) || 1;
+    const normalize = (val, currency) => currency === 'USD' ? val * usdRate : val;
+
     const liveItems = isVendor ? data.vendors : data.clients;
     const companyData = liveItems.find(i => i.id === rawCompanyData?.id) || rawCompanyData || {};
 
@@ -195,15 +256,33 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
         return new Date(a.dueDate || '9999-12-31') - new Date(b.dueDate || '9999-12-31');
     }), [relatedTasks]);
 
-    const { potentialValue, totalOrderValue } = useMemo(() => {
+    const { potentialValue, totalOrderValue, totalPaidValue, totalPendingValue } = useMemo(() => {
         let pv = 0;
         if (companyData.id) {
-            if (isVendor) pv = relatedQuotes.reduce((acc, q) => acc + (q.price * (q.moq || 0)), 0);
-            else pv = relatedQuotes.filter(q => q.status === 'Active').reduce((acc, q) => acc + (q.sellingPrice * (q.moq || 0)), 0);
+            if (isVendor) pv = relatedQuotes.reduce((acc, q) => acc + normalize(parseFloat(q.price || 0) * (q.moq || 0), q.currency), 0);
+            else pv = relatedQuotes.filter(q => q.status === 'Active').reduce((acc, q) => acc + normalize(parseFloat(q.sellingPrice || 0) * (q.moq || 0), q.currency), 0);
         }
-        const tov = relatedOrders.reduce((acc, o) => acc + (o.amount || 0), 0);
-        return { potentialValue: pv, totalOrderValue: tov };
-    }, [relatedQuotes, relatedOrders, isVendor, companyData.id]);
+        
+        let tov = 0;
+        let tpv = 0;
+        relatedOrders.forEach(o => {
+            const orderAmount = normalize(o.amount || 0, o.currency);
+            tov += orderAmount;
+            
+            let paidOnOrder = 0;
+            (o.paymentTerms || []).forEach(term => {
+                paidOnOrder += (parseFloat(term.paidBase) || 0) + (parseFloat(term.paidTax) || 0);
+            });
+            tpv += normalize(paidOnOrder, o.currency);
+        });
+
+        return { 
+            potentialValue: pv, 
+            totalOrderValue: tov, 
+            totalPaidValue: tpv, 
+            totalPendingValue: tov - tpv 
+        };
+    }, [relatedQuotes, relatedOrders, isVendor, companyData.id, usdRate]);
 
     const quoteGroups = useMemo(() => {
         const groups = {};
@@ -220,9 +299,30 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
     if (!detailView.open || !rawCompanyData) return null;
 
     // Handlers
-    const toggleOrderPayment = async (order, termIdx) => {
+    const updateOrderPayment = async (order, termIdx, field, value) => {
         const newTerms = [...order.paymentTerms];
-        newTerms[termIdx].status = newTerms[termIdx].status === 'Paid' ? 'Pending' : 'Paid';
+        const numVal = parseFloat(value) || 0;
+        newTerms[termIdx][field] = numVal;
+        
+        // Auto-update status if total paid equals target amount (with rounding tolerance)
+        const mPercent = newTerms[termIdx].percent / 100;
+        const mTotal = order.amount * mPercent;
+        const pTotal = (newTerms[termIdx].paidBase || 0) + (newTerms[termIdx].paidTax || 0);
+        
+        if (pTotal >= (mTotal - 1)) {
+            newTerms[termIdx].status = 'Paid';
+        } else {
+            newTerms[termIdx].status = 'Pending';
+        }
+        
+        await actions.update('orders', order.id, { paymentTerms: newTerms });
+    };
+
+    const resetOrderPayment = async (order, termIdx) => {
+        const newTerms = [...order.paymentTerms];
+        newTerms[termIdx].paidBase = 0;
+        newTerms[termIdx].paidTax = 0;
+        newTerms[termIdx].status = 'Pending';
         await actions.update('orders', order.id, { paymentTerms: newTerms });
     };
 
@@ -283,6 +383,7 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
                         <span className="hover:text-blue-600 cursor-pointer transition-colors" onClick={() => setDetailView({ open: false, type: null, data: null })}>DESK</span>
                         <Icons.ChevronRight className="w-3 h-3 mx-2 text-slate-300" />
                         <span className="text-slate-900">{companyData.companyName}</span>
+                        {companyData.country && <span className="text-[9px] font-black text-slate-400 border border-slate-200 px-1.5 py-0.5 rounded ml-2 uppercase bg-slate-50">{companyData.country}</span>}
                         <Badge size="xs" color={isVendor ? 'purple' : 'green'} className="ml-3 uppercase px-1.5 py-0">{isVendor ? 'Vendor' : 'Client'}</Badge>
                     </div>
 
@@ -340,7 +441,6 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
                 </header>
 
                 <div className="p-8 scroller flex-1">
-                    {/* --- KPI Summary Bar --- */}
                     <div className="flex gap-16 mb-12">
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Potential</p>
@@ -348,13 +448,18 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
                         </div>
                         <div className="w-px h-8 bg-slate-100 my-auto"></div>
                         <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Lifetime Revenue</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{isVendor ? 'Total Purchases' : 'Lifetime Revenue'}</p>
                             <h3 className="text-xl font-bold tracking-tight text-slate-900">{formatMoney(totalOrderValue)}</h3>
                         </div>
                         <div className="w-px h-8 bg-slate-100 my-auto"></div>
                         <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Country</p>
-                            <h3 className="text-xl font-bold tracking-tight text-slate-700">{companyData.country || '--'}</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Payment Done</p>
+                            <h3 className="text-xl font-bold tracking-tight text-emerald-600">{formatMoney(totalPaidValue)}</h3>
+                        </div>
+                        <div className="w-px h-8 bg-slate-100 my-auto"></div>
+                        <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Payment Pending</p>
+                            <h3 className="text-xl font-bold tracking-tight text-amber-600">{formatMoney(totalPendingValue)}</h3>
                         </div>
                     </div>
 
@@ -453,9 +558,11 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
                                             products={products}
                                             actions={actions}
                                             setModal={setModal}
-                                            toggleOrderPayment={toggleOrderPayment}
+                                            updateOrderPayment={updateOrderPayment}
+                                            resetOrderPayment={resetOrderPayment}
                                             updateOrderDoc={updateOrderDoc}
                                             isVendor={isVendor}
+                                            settings={settings}
                                         />
                                     ))}
                                     {relatedOrders.length === 0 && <div className="py-20 text-center text-[11px] text-slate-400 uppercase tracking-widest font-bold">No order history</div>}
@@ -489,6 +596,7 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
                                                 historyQuotes={historyQuotes}
                                                 isVendor={isVendor}
                                                 setModal={setModal}
+                                                settings={settings}
                                             />
                                         );
                                     })}
@@ -504,9 +612,19 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
 };
 
 // --- Local Quote Card Component ---
-const QuoteCard = ({ sku, product, latestQuote, historyQuotes, isVendor, setModal }) => {
+const QuoteCard = ({ sku, product, latestQuote, historyQuotes, isVendor, setModal, settings }) => {
     const [showHistory, setShowHistory] = useState(false);
-    const rate = isVendor ? latestQuote.price : latestQuote.sellingPrice;
+    const usdRate = parseFloat(settings?.usdToInrRate) || 1;
+    const rate = isVendor ? (latestQuote.price || 0) : (latestQuote.sellingPrice || 0);
+
+    // Normalize Cost for Margin
+    let normalizedCost = latestQuote.baseCostPrice || 0;
+    const costCurr = latestQuote.baseCostCurrency || 'INR';
+    const sellCurr = latestQuote.currency || 'INR';
+    if (sellCurr === 'USD' && costCurr === 'INR') normalizedCost = (latestQuote.baseCostPrice || 0) / usdRate;
+    else if (sellCurr === 'INR' && costCurr === 'USD') normalizedCost = (latestQuote.baseCostPrice || 0) * usdRate;
+
+    const margin = !isVendor ? (rate - normalizedCost) * (latestQuote.moq || 0) : 0;
     const investment = rate * (latestQuote.moq || 0);
     const dateStr = latestQuote.createdAt ? formatDate(latestQuote.createdAt.toDate ? latestQuote.createdAt.toDate() : latestQuote.createdAt) : '--';
     const shortDate = dateStr.split(' ').slice(0, 2).join('-'); // e.g. "26-Jan"
@@ -543,16 +661,23 @@ const QuoteCard = ({ sku, product, latestQuote, historyQuotes, isVendor, setModa
                     <div>
                         <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter block leading-none mb-0.5">Rate</span>
                         <div className="flex items-baseline gap-0.5">
-                            <span className="text-[13px] font-bold text-slate-800">{formatMoney(rate).split('.')[0]}</span>
+                            <span className="text-[13px] font-bold text-slate-800">{formatMoney(rate, latestQuote.currency)}</span>
                             <span className="text-[9px] font-bold text-slate-400 italic">/u</span>
                         </div>
-                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter leading-none">MOQ: {latestQuote.moq}</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter leading-none bg-slate-100 px-1 py-0.5 rounded-sm">MOQ: {latestQuote.moq}</span>
                     </div>
 
-                    {/* Investment */}
+                    {!isVendor && (
+                        <div className="border-l border-slate-200 pl-4">
+                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter block leading-none mb-0.5">Estimated Margin</span>
+                            <span className={`text-[13px] font-bold ${margin >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatMoney(margin, latestQuote.currency)}</span>
+                        </div>
+                    )}
+
+                    {/* Sales/Cost */}
                     <div className="border-l border-slate-200 pl-4">
-                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter block leading-none mb-0.5">Investment</span>
-                        <span className="text-[13px] font-bold text-purple-600">{formatMoney(investment).split('.')[0]}</span>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter block leading-none mb-0.5">{isVendor ? 'Total Cost' : 'Potential Sales'}</span>
+                        <span className="text-[13px] font-bold text-purple-600">{formatMoney(investment, latestQuote.currency)}</span>
                     </div>
                 </div>
 
@@ -583,7 +708,7 @@ const QuoteCard = ({ sku, product, latestQuote, historyQuotes, isVendor, setModa
                                 return (
                                     <div key={q.id} className="flex items-center justify-between py-1 px-2 border border-slate-50 bg-white rounded shadow-sm group/row hover:border-slate-200 transition-colors">
                                         <div className="flex items-center gap-3">
-                                            <span className="text-[11px] font-bold text-slate-700">{formatMoney(qRate).split('.')[0]}</span>
+                                            <span className="text-[11px] font-bold text-slate-700">{formatMoney(qRate)}</span>
                                             <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">MOQ: {q.moq}</span>
                                         </div>
                                         <div className="flex items-center gap-3">

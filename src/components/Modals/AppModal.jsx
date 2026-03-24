@@ -33,6 +33,20 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
         }
     }, [modal.open, modal.data]);
 
+    const [newDocName, setNewDocName] = useState('');
+    const handleAddDoc = () => {
+        if (!newDocName.trim()) return;
+        const current = form.docRequirements || {};
+        setForm({
+            ...form,
+            docRequirements: {
+                ...current,
+                [newDocName.trim()]: { required: true, received: false, link: '' }
+            }
+        });
+        setNewDocName('');
+    };
+
     // --- STATE FOR AUTO-FILLS (ORS & RFQ) ---
     const [derivedDetails, setDerivedDetails] = useState({
         productName: '-',
@@ -66,13 +80,23 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                     requiredDocs: ORS_REQUIRED_DOCS.reduce((acc, doc) => ({ ...acc, [doc]: true }), {})
                 }));
             }
+            if (modal.type === 'order') {
+                setForm(prev => ({
+                    ...prev,
+                    date: prev.date || new Date().toISOString().split('T')[0],
+                    currency: prev.currency || 'INR'
+                }));
+            }
             // Sales Quote Defaults (multi-SKU)
             if (modal.type === 'quoteSent') {
                 setForm(prev => ({
                     ...prev,
+                    quoteId: prev.quoteId || '',
+                    clientId: prev.clientId || '',
                     date: prev.date || new Date().toISOString().split('T')[0],
                     currency: prev.currency || 'INR',
-                    lineItems: prev.lineItems || [{ skuId: '', moq: '', sellingPrice: '', baseCostId: '', baseCostPrice: '', status: 'Draft' }]
+                    driveLink: prev.driveLink || '',
+                    lineItems: prev.lineItems || [{ skuId: '', moq: '', sellingPrice: '', baseCostId: '', baseCostPrice: 0, baseCostCurrency: 'INR', status: 'Draft' }]
                 }));
             }
             // RFQ Defaults
@@ -95,18 +119,70 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
         }
     }, [modal.type, modal.isEdit, form.contextType]);
 
-    // Order Calculations
+    // Order Calculations (Multi-SKU support)
     useEffect(() => {
         if (modal.type === 'order') {
-            const qty = parseFloat(form.qty) || 0;
-            const rate = parseFloat(form.rate) || 0;
-            const taxRate = parseFloat(form.taxRate) || 0;
-            const baseAmount = qty * rate;
-            const taxAmount = (baseAmount * taxRate) / 100;
-            const total = baseAmount + taxAmount;
-            setForm(f => ({ ...f, amount: total, taxAmount: taxAmount }));
+            const usdRate = parseFloat(settings?.usdToInrRate) || 1;
+            
+            if (!modal.isEdit && form.lineItems?.length) {
+                let totalAmount = 0;
+                let totalTax = 0;
+                let totalMargin = 0;
+
+                form.lineItems.forEach(line => {
+                    const qty = parseFloat(line.qty) || 0;
+                    const rate = parseFloat(line.rate) || 0;
+                    const taxRate = parseFloat(line.taxRate) || 0;
+                    const cost = parseFloat(line.baseCostPrice) || 0;
+                    
+                    let normalizedCost = cost;
+                    if (form.currency === 'USD' && (line.baseCostCurrency === 'INR' || !line.baseCostCurrency)) {
+                        normalizedCost = cost / usdRate;
+                    } else if (form.currency === 'INR' && line.baseCostCurrency === 'USD') {
+                        normalizedCost = cost * usdRate;
+                    }
+
+                    const baseAmount = qty * rate;
+                    const taxAmount = (baseAmount * taxRate) / 100;
+                    totalAmount += baseAmount + taxAmount;
+                    totalTax += taxAmount;
+                    totalMargin += (rate - normalizedCost) * qty;
+                });
+
+                setForm(f => ({ 
+                    ...f, 
+                    amount: totalAmount, 
+                    taxAmount: totalTax, 
+                    totalMargin: isNaN(totalMargin) ? 0 : totalMargin
+                }));
+            } else if (modal.isEdit || (!form.lineItems?.length)) {
+                const qty = parseFloat(form.qty) || 0;
+                const rate = parseFloat(form.rate) || 0;
+                const taxRate = parseFloat(form.taxRate) || 0;
+                const cost = parseFloat(form.baseCostPrice) || 0;
+
+                let normalizedCost = cost;
+                if (form.currency === 'USD' && (form.baseCostCurrency === 'INR' || !form.baseCostCurrency)) {
+                    normalizedCost = cost / usdRate;
+                } else if (form.currency === 'INR' && form.baseCostCurrency === 'USD') {
+                    normalizedCost = cost * usdRate;
+                }
+
+                const baseAmount = qty * rate;
+                const taxAmount = (baseAmount * taxRate) / 100;
+                const total = baseAmount + taxAmount;
+                const totalMargin = (rate - normalizedCost) * qty;
+
+                setForm(f => ({ 
+                    ...f, 
+                    amount: total, 
+                    taxAmount: taxAmount, 
+                    totalMargin: isNaN(totalMargin) ? 0 : totalMargin,
+                    baseCostPrice: isNaN(cost) ? 0 : cost
+                }));
+            }
         }
-    }, [form.qty, form.rate, form.taxRate, modal.type]);
+    }, [form.qty, form.rate, form.taxRate, form.baseCostPrice, form.baseCostCurrency, form.currency, form.lineItems, modal.type, modal.isEdit, settings]);
 
     // Auto-generate SKU Code
     useEffect(() => {
@@ -162,6 +238,15 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
         }
 
         const col = map[modal.type];
+        
+        // Sanitize numeric fields to prevent NaN before saving
+        const numericFields = ['sellingPrice', 'price', 'moq', 'qty', 'rate', 'taxRate', 'amount', 'taxAmount', 'baseCostPrice', 'totalMargin', 'totalAmount'];
+        numericFields.forEach(field => {
+            if (form[field] !== undefined) {
+                const val = parseFloat(form[field]);
+                form[field] = isNaN(val) ? 0 : val;
+            }
+        });
 
         // Specific Validation for Vendor Input in RFQ (since it's a datalist)
         if (modal.type === 'rfq' && form.vendorNameInput) {
@@ -240,22 +325,89 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
         if (col) {
             // Multi-SKU Sales Quote creation
             if (modal.type === 'quoteSent' && !modal.isEdit && form.lineItems?.length) {
-                const commonFields = { quoteId: form.quoteId, clientId: form.clientId, date: form.date, currency: form.currency, driveLink: form.driveLink };
+                const commonFields = { 
+                    quoteId: form.quoteId || '', 
+                    clientId: form.clientId || '', 
+                    date: form.date || '', 
+                    currency: form.currency || 'INR', 
+                    driveLink: form.driveLink || '' 
+                };
                 for (const line of form.lineItems) {
-                    await actions.add('quotesSent', { ...commonFields, skuId: line.skuId, moq: line.moq, sellingPrice: line.sellingPrice, baseCostId: line.baseCostId || '', baseCostPrice: line.baseCostPrice || '', status: line.status || 'Draft' });
+                    await actions.add('quotesSent', { 
+                        ...commonFields, 
+                        skuId: line.skuId || '', 
+                        moq: parseFloat(line.moq) || 0, 
+                        sellingPrice: parseFloat(line.sellingPrice) || 0, 
+                        baseCostId: line.baseCostId || '', 
+                        baseCostPrice: parseFloat(line.baseCostPrice) || 0, 
+                        baseCostCurrency: line.baseCostCurrency || 'INR',
+                        status: line.status || 'Draft' 
+                    });
+                }
+            } else if (modal.type === 'order' && !modal.isEdit && form.lineItems?.length) {
+                // Multi-SKU Order creation
+                const commonFields = { 
+                    orderId: form.orderId || '', 
+                    date: form.date || '', 
+                    currency: form.currency || 'INR', 
+                    companyId: form.companyId || '',
+                    paymentTerms: form.paymentTerms || [],
+                    docRequirements: form.docRequirements || {}
+                };
+                for (const line of form.lineItems) {
+                    const qty = parseFloat(line.qty) || 0;
+                    const rate = parseFloat(line.rate) || 0;
+                    const taxRate = parseFloat(line.taxRate) || 0;
+                    const baseAm = qty * rate;
+                    const taxAm = (baseAm * taxRate) / 100;
+
+                    await actions.add('orders', { 
+                        ...commonFields, 
+                        skuId: line.skuId || '', 
+                        qty: qty, 
+                        rate: rate, 
+                        taxRate: taxRate,
+                        amount: baseAm + taxAm,
+                        taxAmount: taxAm,
+                        baseCostId: line.baseCostId || '', 
+                        baseCostPrice: parseFloat(line.baseCostPrice) || 0, 
+                        baseCostCurrency: line.baseCostCurrency || 'INR'
+                    });
+                }
+            } else if (modal.type === 'quoteReceived' && !modal.isEdit && form.lineItems?.length) {
+                // Multi-SKU Purchase Quote creation
+                const commonFields = { 
+                    quoteId: form.quoteId || '', 
+                    vendorId: form.vendorId || '', 
+                    currency: form.currency || 'INR', 
+                    driveLink: form.driveLink || '' 
+                };
+                for (const line of form.lineItems) {
+                    await actions.add('quotesReceived', { 
+                        ...commonFields, 
+                        skuId: line.skuId || '', 
+                        moq: parseFloat(line.moq) || 0, 
+                        price: parseFloat(line.price) || 0
+                    });
                 }
             } else {
+                // Final safety check for undefined top-level fields
+                const cleanData = { ...form };
+                Object.keys(cleanData).forEach(key => {
+                    if (cleanData[key] === undefined) cleanData[key] = '';
+                });
+
                 // Specifically for users, we use email as ID for deterministic security rules
                 if (col === 'users') {
                     if (modal.isEdit && modal.data.id !== form.email) {
                         // Manual delete if ID changed (to avoid the confirm prompt for internal move)
                         await actions.del('users', modal.data.id);
                     }
-                    await actions.set('users', form.email, form);
+                    await actions.set('users', form.email, cleanData);
                 } else if (modal.isEdit) {
-                    await actions.update(col, modal.data.id, form);
+                    await actions.update(col, modal.data.id, cleanData);
                 } else {
-                    await actions.add(col, form);
+                    await actions.add(col, cleanData);
                 }
             }
             setModal({ open: false, type: null, data: null, isEdit: false });
@@ -668,44 +820,34 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                 </div>
             );
             case 'quoteReceived': return (
-                <div className="space-y-4">
+                <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1 scroller">
                     <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <h3 className="font-bold text-lg text-slate-800">{modal.isEdit ? 'Edit' : 'New'} Purchase Quote</h3>
                     </div>
+                    
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Quote ID / Ref</label>
-                            <input className="w-full p-2 border border-slate-300 rounded text-[13px] font-mono" placeholder="QUO-123" value={form.quoteId || ''} onChange={e => setForm({ ...form, quoteId: e.target.value })} />
-                        </div>
-                        <div>
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">MOQ</label>
-                            <input type="number" className="w-full p-2 border border-slate-300 rounded text-[13px]" placeholder="0" value={form.moq || ''} onChange={e => setForm({ ...form, moq: e.target.value })} />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
+                         <div>
                             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Vendor / Party</label>
-                            <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white" value={form.vendorId || ''} onChange={e => setForm({ ...form, vendorId: e.target.value })}>
+                            <select 
+                                className={`w-full p-2 border border-slate-300 rounded text-[13px] ${!!modal.data?.vendorId ? 'bg-slate-50 cursor-not-allowed text-slate-500' : 'bg-white'}`} 
+                                value={form.vendorId || ''} 
+                                onChange={e => setForm({ ...form, vendorId: e.target.value })}
+                                disabled={!!modal.data?.vendorId}
+                            >
                                 <option>Select Vendor...</option>
                                 {vendors.map(v => <option key={v.id} value={v.id}>{v.companyName}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU</label>
-                            <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
-                                <option>Select SKU...</option>
-                                {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Quote ID / Ref</label>
+                            <input className="w-full p-2 border border-slate-300 rounded text-[13px] font-mono" placeholder="QUO-123" value={form.quoteId || ''} onChange={e => setForm({ ...form, quoteId: e.target.value })} />
                         </div>
                     </div>
-                    <div>
-                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Document Link</label>
-                        <input className="w-full p-2 border border-slate-300 rounded text-[13px] text-blue-600" placeholder="Drive URL..." value={form.driveLink || ''} onChange={e => setForm({ ...form, driveLink: e.target.value })} />
-                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Unit Price</label>
-                            <input type="number" step="any" className="w-full p-2 border border-slate-300 rounded text-[13px] font-bold" value={form.price || ''} onChange={e => setForm({ ...form, price: e.target.value })} />
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Document Link</label>
+                            <input className="w-full p-2 border border-slate-300 rounded text-[13px] text-blue-600" placeholder="Drive URL..." value={form.driveLink || ''} onChange={e => setForm({ ...form, driveLink: e.target.value })} />
                         </div>
                         <div>
                             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Currency</label>
@@ -715,6 +857,85 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             </select>
                         </div>
                     </div>
+
+                    {!modal.isEdit ? (
+                        <div className="border-t border-slate-100 pt-4">
+                            <div className="flex justify-between items-center mb-3">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">SKU Line Items</label>
+                                <button onClick={() => setForm(f => ({ ...f, lineItems: [...(f.lineItems || []), { skuId: '', moq: 0, price: 0 }] }))} className="text-[11px] text-blue-600 font-bold hover:underline uppercase">+ Add SKU</button>
+                            </div>
+                            <div className="space-y-3">
+                                {(form.lineItems || []).map((line, idx) => (
+                                    <div key={idx} className="bg-slate-50/50 p-3 rounded-lg border border-slate-200 space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Line #{idx + 1}</span>
+                                            {form.lineItems.length > 1 && (
+                                                <button onClick={() => {
+                                                    const newLines = [...form.lineItems];
+                                                    newLines.splice(idx, 1);
+                                                    setForm({ ...form, lineItems: newLines });
+                                                }} className="text-red-400 hover:text-red-600"><Icons.Trash className="w-3.5 h-3.5" /></button>
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <div className="col-span-1">
+                                                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">SKU</label>
+                                                <select className="w-full p-1.5 border border-slate-300 rounded text-[12px] bg-white" value={line.skuId || ''} onChange={e => {
+                                                    const newLines = [...form.lineItems];
+                                                    newLines[idx].skuId = e.target.value;
+                                                    setForm({ ...form, lineItems: newLines });
+                                                }}>
+                                                    <option value="">Select SKU...</option>
+                                                    {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">MOQ</label>
+                                                <input type="number" className="w-full p-1.5 border border-slate-300 rounded text-[12px]" value={line.moq || ''} onChange={e => {
+                                                    const newLines = [...form.lineItems];
+                                                    newLines[idx].moq = e.target.value;
+                                                    setForm({ ...form, lineItems: newLines });
+                                                }} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Price</label>
+                                                <input type="number" step="any" className="w-full p-1.5 border border-slate-300 rounded text-[12px]" value={line.price || ''} onChange={e => {
+                                                    const newLines = [...form.lineItems];
+                                                    newLines[idx].price = e.target.value;
+                                                    setForm({ ...form, lineItems: newLines });
+                                                }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {(!form.lineItems || form.lineItems.length === 0) && (
+                                    <div className="text-center py-6 bg-slate-50/50 border border-dashed border-slate-200 rounded text-slate-400 text-[11px] uppercase tracking-wider">
+                                        No SKUs added. Click + ADD SKU above.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU</label>
+                                    <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
+                                        <option>Select SKU...</option>
+                                        {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">MOQ</label>
+                                    <input type="number" className="w-full p-2 border border-slate-300 rounded text-[13px]" placeholder="0" value={form.moq || ''} onChange={e => setForm({ ...form, moq: e.target.value })} />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Unit Price</label>
+                                <input type="number" step="any" className="w-full p-2 border border-slate-300 rounded text-[13px] font-bold" value={form.price || ''} onChange={e => setForm({ ...form, price: e.target.value })} />
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
             case 'quoteSent': {
@@ -728,7 +949,8 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                     // If setting baseCostId, also set baseCostPrice
                     if (field === 'baseCostId') {
                         const bq = quotesReceived.find(q => q.id === value);
-                        newLines[idx].baseCostPrice = bq?.price || '';
+                        newLines[idx].baseCostPrice = bq?.price || 0;
+                        newLines[idx].baseCostCurrency = bq?.currency || 'INR';
                     }
                     setForm({ ...form, lineItems: newLines });
                 };
@@ -757,7 +979,12 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             </div>
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Client / Party</label>
-                                <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white" value={form.clientId || ''} onChange={e => setForm({ ...form, clientId: e.target.value })}>
+                                <select 
+                                    className={`w-full p-2 border border-slate-300 rounded text-[13px] ${!!modal.data?.clientId ? 'bg-slate-50 cursor-not-allowed text-slate-500' : 'bg-white'}`} 
+                                    value={form.clientId || ''} 
+                                    onChange={e => setForm({ ...form, clientId: e.target.value })}
+                                    disabled={!!modal.data?.clientId}
+                                >
                                     <option>Select Client...</option>
                                     {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
                                 </select>
@@ -875,7 +1102,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                                                 const v = vendors.find(x => x.id === q.vendorId);
                                                 return (
                                                     <label key={q.id} className={`flex items-center gap-2 p-1.5 rounded border transition-colors cursor-pointer ${form.baseCostId === q.id ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-100'}`}>
-                                                        <input type="radio" className="w-3 h-3 text-blue-600" name="baseCost" checked={form.baseCostId === q.id} onChange={() => setForm({ ...form, baseCostId: q.id, baseCostPrice: q.price })} />
+                                                        <input type="radio" className="w-3 h-3 text-blue-600" name="baseCost" checked={form.baseCostId === q.id} onChange={() => setForm({ ...form, baseCostId: q.id, baseCostPrice: q.price, baseCostCurrency: q.currency })} />
                                                         <div className="flex-1 truncate">
                                                             <span className="font-bold text-slate-700">{q.quoteId}</span>
                                                             <span className="text-slate-400 mx-1">|</span>
@@ -916,7 +1143,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                         <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                             <h3 className="font-bold text-lg text-slate-800">{modal.isEdit ? 'Edit' : 'New'} Order</h3>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Order Date</label>
                                 <input type="date" className="w-full p-2 border border-slate-300 rounded text-[13px]" value={form.date || ''} onChange={e => setForm({ ...form, date: e.target.value })} />
@@ -925,32 +1152,180 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Order ID / Ref</label>
                                 <input placeholder="e.g. PO-123" className="w-full p-2 border border-slate-300 rounded text-[13px] font-mono" value={form.orderId || ''} onChange={e => setForm({ ...form, orderId: e.target.value })} />
                             </div>
-                        </div>
-                        <div>
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU</label>
-                            <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
-                                <option value="">Select SKU...</option>
-                                {availableSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Quantity</label>
-                                <input type="number" className="w-full p-2 border border-slate-300 rounded text-[13px]" value={form.qty || ''} onChange={e => setForm({ ...form, qty: e.target.value })} />
-                            </div>
-                            <div>
-                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Rate</label>
-                                <input type="number" className="w-full p-2 border border-slate-300 rounded text-[13px]" value={form.rate || ''} onChange={e => setForm({ ...form, rate: e.target.value })} />
-                            </div>
-                            <div>
-                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Tax %</label>
-                                <input type="number" className="w-full p-2 border border-slate-300 rounded text-[13px]" value={form.taxRate || ''} onChange={e => setForm({ ...form, taxRate: e.target.value })} />
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Currency</label>
+                                <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.currency || ''} onChange={e => setForm({ ...form, currency: e.target.value })}>
+                                    <option value="INR">INR (₹)</option>
+                                    <option value="USD">USD ($)</option>
+                                </select>
                             </div>
                         </div>
+
+                        {!modal.isEdit ? (
+                            <div className="border-t border-slate-100 pt-4">
+                                <div className="flex justify-between items-center mb-3">
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">SKU Line Items</label>
+                                    <button onClick={() => setForm(f => ({ ...f, lineItems: [...(f.lineItems || []), { skuId: '', qty: 0, rate: 0, taxRate: 18, baseCostPrice: 0 }] }))} className="text-[11px] text-blue-600 font-bold hover:underline uppercase">+ Add SKU</button>
+                                </div>
+                                <div className="space-y-3">
+                                    {(form.lineItems || []).map((line, idx) => {
+                                        const handleLineChange = (field, val) => {
+                                            const newLines = [...form.lineItems];
+                                            newLines[idx][field] = val;
+                                            setForm({ ...form, lineItems: newLines });
+                                        };
+                                        const rQuotes = quotesReceived.filter(q => q.skuId === line.skuId);
+                                        
+                                        return (
+                                            <div key={idx} className="bg-slate-50/50 p-3 rounded-lg border border-slate-200 space-y-3">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Line #{idx + 1}</span>
+                                                    {form.lineItems.length > 1 && (
+                                                        <button onClick={() => {
+                                                            const newLines = [...form.lineItems];
+                                                            newLines.splice(idx, 1);
+                                                            setForm({ ...form, lineItems: newLines });
+                                                        }} className="text-red-400 hover:text-red-600"><Icons.Trash className="w-3.5 h-3.5" /></button>
+                                                    )}
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">SKU</label>
+                                                        <select className="w-full p-1.5 border border-slate-300 rounded text-[12px] bg-white" value={line.skuId || ''} onChange={e => handleLineChange('skuId', e.target.value)}>
+                                                            <option value="">Select SKU...</option>
+                                                            {availableSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-1.5">
+                                                        <div>
+                                                            <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Qty</label>
+                                                            <input type="number" className="w-full p-1.5 border border-slate-300 rounded text-[12px]" value={line.qty || ''} onChange={e => handleLineChange('qty', e.target.value)} />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Rate</label>
+                                                            <input type="number" className="w-full p-1.5 border border-slate-300 rounded text-[12px]" value={line.rate || ''} onChange={e => handleLineChange('rate', e.target.value)} />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Tax%</label>
+                                                            <input type="number" className="w-full p-1.5 border border-slate-300 rounded text-[12px]" value={line.taxRate || ''} onChange={e => handleLineChange('taxRate', e.target.value)} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {line.skuId && rQuotes.length > 0 && clients.some(c => c.id === (form.companyId || modal.data?.companyId)) && (
+                                                    <div className="bg-white p-2 rounded border border-slate-200">
+                                                        <div className="text-[9px] font-bold text-slate-400 uppercase mb-1">Pick Vendor Quote (Cost):</div>
+                                                        <div className="space-y-1 max-h-24 overflow-y-auto scroller">
+                                                            {rQuotes.sort((a,b) => (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(q => {
+                                                                const v = vendors.find(vt => vt.id === q.vendorId);
+                                                                return (
+                                                                    <label key={q.id} className="flex items-center gap-2 text-[10px] p-1 border border-slate-100 rounded hover:bg-slate-50 cursor-pointer">
+                                                                        <input type="radio" name={`cost-${idx}`} checked={line.baseCostId === q.id} onChange={() => {
+                                                                            const newLines = [...form.lineItems];
+                                                                            newLines[idx].baseCostId = q.id;
+                                                                            newLines[idx].baseCostPrice = q.price;
+                                                                            newLines[idx].baseCostCurrency = q.currency;
+                                                                            setForm({ ...form, lineItems: newLines });
+                                                                        }} className="w-3 h-3 text-blue-600" />
+                                                                        <span className="truncate flex-1">{v?.companyName}: {formatMoney(q.price, q.currency)}</span>
+                                                                    </label>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {line.skuId && rQuotes.length === 0 && clients.some(c => c.id === (form.companyId || modal.data?.companyId)) && (
+                                                    <input type="number" placeholder="Manual Cost Price..." className="w-full p-1.5 border border-slate-300 rounded text-[12px] bg-white mt-1" value={line.baseCostPrice || ''} onChange={e => handleLineChange('baseCostPrice', e.target.value)} />
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                    {(!form.lineItems || form.lineItems.length === 0) && (
+                                        <div className="text-center py-6 bg-slate-50/50 border border-dashed border-slate-200 rounded text-slate-400 text-[11px] uppercase tracking-wider">
+                                            No line items added. Click + ADD SKU above.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            /* Existing single-line edit logic */
+                            <>
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU</label>
+                                    <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
+                                        <option value="">Select SKU...</option>
+                                        {availableSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Quantity</label>
+                                        <input type="number" className="w-full p-2 border border-slate-300 rounded text-[13px]" value={form.qty || ''} onChange={e => setForm({ ...form, qty: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Selling Rate</label>
+                                        <input type="number" className="w-full p-2 border border-slate-300 rounded text-[13px]" value={form.rate || ''} onChange={e => setForm({ ...form, rate: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Tax %</label>
+                                        <input type="number" className="w-full p-2 border border-slate-300 rounded text-[13px]" value={form.taxRate || ''} onChange={e => setForm({ ...form, taxRate: e.target.value })} />
+                                    </div>
+                                </div>
+
+                                {clients.some(c => c.id === (form.companyId || modal.data?.companyId)) && (
+                                    <div className="bg-slate-50 p-3 rounded border border-slate-200 space-y-3">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Base Cost Price</label>
+                                            <span className="text-[10px] text-slate-400 font-bold uppercase italic tracking-tighter">(FOR MARGIN CALCULATION)</span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <div className="flex-1">
+                                                <input 
+                                                    type="number" 
+                                                    placeholder="Manual Cost Price..." 
+                                                    className="w-full p-2 border border-slate-200 rounded text-[13px] bg-white" 
+                                                    value={form.baseCostPrice || ''} 
+                                                    onChange={e => setForm({ ...form, baseCostPrice: e.target.value })} 
+                                                />
+                                            </div>
+                                            <div className="flex-1 overflow-hidden">
+                                                <div className="text-[9px] font-bold text-slate-400 uppercase mb-1">Recent Vendor Quotes:</div>
+                                                <div className="space-y-1 max-h-24 overflow-y-auto pr-1 scroller">
+                                                    {quotesReceived.filter(q => q.skuId === form.skuId).sort((a,b) => (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(q => {
+                                                        const v = vendors.find(vt => vt.id === q.vendorId);
+                                                        return (
+                                                            <label key={q.id} className="flex items-center gap-2 text-[10px] p-1.5 border border-slate-200 rounded hover:bg-white cursor-pointer group transition-colors">
+                                                                <input 
+                                                                    type="radio" 
+                                                                    name="costSource" 
+                                                                    checked={form.baseCostPrice === q.price} 
+                                                                    onChange={() => setForm({ ...form, baseCostPrice: q.price, baseCostId: q.id, baseCostCurrency: q.currency })} 
+                                                                    className="w-3 h-3 text-blue-600 focus:ring-0"
+                                                                />
+                                                                <span className="truncate flex-1 font-medium">{v?.companyName}: {formatMoney(q.price, q.currency)}</span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                    {quotesReceived.filter(q => q.skuId === form.skuId).length === 0 && (
+                                                        <div className="text-[10px] text-slate-400 italic">No quotes for this SKU.</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
                         <div className="text-right font-bold text-lg text-slate-700 bg-slate-50 p-2 rounded border border-slate-200">
+                            {clients.some(c => c.id === (form.companyId || modal.data?.companyId)) && (
+                                <div className="flex justify-between items-center mb-1 border-b border-slate-100 pb-1">
+                                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">Estimated Margin:</span>
+                                    <span className={`text-sm ${(form.totalMargin || 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatMoney(form.totalMargin || 0, form.currency)}</span>
+                                </div>
+                            )}
                             <span className="text-[10px] text-slate-400 uppercase mr-2 tracking-wider">Total Amount:</span>
-                            {formatMoney(form.amount)}
-                            <div className="text-[10px] text-slate-400 font-normal">Includes Tax: {formatMoney(form.taxAmount)}</div>
+                            {formatMoney(form.amount, form.currency)}
+                            <div className="text-[10px] text-slate-400 font-normal">Includes Tax: {formatMoney(form.taxAmount, form.currency)}</div>
                         </div>
 
                         <div className="border-t border-slate-100 pt-4">
@@ -969,7 +1344,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                                             <input type="number" className="text-xs p-1.5 border border-slate-200 rounded w-full pr-4 text-right bg-white" value={term.percent} onChange={e => handlePaymentTermChange(idx, 'percent', parseFloat(e.target.value))} />
                                             <span className="absolute right-1 top-1.5 text-[10px] text-slate-400">%</span>
                                         </div>
-                                        <span className="text-[11px] font-mono font-bold text-slate-600 w-20 text-right">{formatMoney((form.amount || 0) * (term.percent / 100))}</span>
+                                        <span className="text-[11px] font-mono font-bold text-slate-600 w-20 text-right">{formatMoney((form.amount || 0) * (term.percent / 100), form.currency)}</span>
                                         <button onClick={() => handlePaymentTermDelete(idx)} className="p-1 text-slate-300 hover:text-red-500"><Icons.X className="w-3.5 h-3.5" /></button>
                                     </div>
                                 ))}
@@ -980,7 +1355,8 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                         <div className="border-t border-slate-100 pt-4">
                             <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-2 block">Required Documents</label>
                             <div className="grid grid-cols-2 gap-2">
-                                {REQUIRED_DOCS.map(doc => {
+                                {/* Merge Standard Docs and Custom Docs unique keys */}
+                                {[...new Set([...REQUIRED_DOCS, ...Object.keys(form.docRequirements || {})])].sort((a,b) => a.localeCompare(b)).map(doc => {
                                     const isRequired = form.docRequirements?.[doc];
                                     return (
                                         <label key={doc} className={`flex items-center gap-2 text-[11px] cursor-pointer p-1.5 rounded border transition-colors ${isRequired ? 'bg-blue-50 border-blue-200 text-blue-700 font-bold' : 'bg-white border-slate-200 text-slate-500'}`}>
@@ -994,6 +1370,16 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                                         </label>
                                     );
                                 })}
+                            </div>
+                            <div className="mt-3 flex gap-2">
+                                <input 
+                                    placeholder="Add Custom Document (e.g. COA)..." 
+                                    className="flex-1 text-[11px] p-2 border border-slate-200 rounded bg-white outline-none focus:border-blue-300"
+                                    value={newDocName}
+                                    onChange={e => setNewDocName(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddDoc())}
+                                />
+                                <button type="button" onClick={handleAddDoc} className="text-[10px] font-bold text-blue-600 border border-blue-200 px-3 py-1.5 rounded hover:bg-blue-50">+ ADD</button>
                             </div>
                         </div>
                     </div>
