@@ -38,7 +38,7 @@ const sortMonths = (a, b) => {
 };
 
 export const DashboardOverview = ({ data, actions, setActiveTab }) => {
-    const { products, skus, clients, tasks, quotesSent, rfqs } = data;
+    const { products, skus, clients, tasks, quotesSent, rfqs, orders } = data;
 
     // Only count ACTIVE quotes in pipeline
     const activeQuotes = quotesSent.filter(q => q.status === 'Active');
@@ -127,6 +127,28 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
         };
     }, [clients]);
 
+    // Prepare Sales (monthly) from Client POs
+    const salesChartData = useMemo(() => {
+        const monthData = {};
+        
+        const clientPOs = (orders || []).filter(o => clients.some(c => c.id === o.companyId));
+        
+        clientPOs.forEach(po => {
+            const dateStr = po.date || po.createdAt;
+            const monthYear = getMonthYear(dateStr);
+            if (!monthYear) return;
+            
+            if (!monthData[monthYear]) monthData[monthYear] = 0;
+            monthData[monthYear] += parseFloat(po.amount || 0);
+        });
+
+        const sortedMonths = Object.keys(monthData).sort(sortMonths);
+        return sortedMonths.map(month => ({
+            month,
+            sales: parseFloat(monthData[month].toFixed(2))
+        }));
+    }, [orders, clients]);
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center border-b border-slate-200 pb-2">
@@ -186,39 +208,56 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                     </div>
                 </div>
 
+                {/* Sales Monthly Chart */}
                 <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
                     <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
-                        <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Urgent Pending Tasks</h3>
-                        <button onClick={() => setActiveTab('tasks')} className="text-[10px] font-bold text-blue-600 uppercase hover:underline">View All</button>
+                        <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Sales (Client POs)</h3>
                     </div>
-                    <div className="divide-y divide-slate-100 max-h-[288px] overflow-y-auto scroller">
-                        {tasks.filter(t => t.status !== 'Completed').slice(0, 10).map(t => (
-                            <div key={t.id} className="flex items-center gap-3 p-3 hover:bg-slate-50/50 transition-colors">
-                                {t.priority === 'High' ? (
-                                    <Icons.AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                                ) : (
-                                    <div className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                    </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-[13px] font-semibold text-slate-700 truncate">{t.title}</div>
-                                    <div className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">
-                                        {formatDate(t.dueDate)} • <span className="text-slate-500">{t.assignee}</span>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => actions.update('tasks', t.id, { status: 'Completed' })}
-                                    className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border border-slate-200 text-slate-400 hover:text-green-600 hover:border-green-200 hover:bg-green-50/50 rounded transition-all"
-                                >
-                                    Action
-                                </button>
-                            </div>
-                        ))}
-                        {tasks.filter(t => t.status !== 'Completed').length === 0 && (
-                            <div className="p-8 text-center">
-                                <Icons.Task className="w-8 h-8 text-slate-200 mx-auto mb-2" />
-                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">All tasks cleared</p>
+                    <div className="p-4 h-72">
+                        {salesChartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={salesChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis
+                                        dataKey="month"
+                                        fontSize={10}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tick={{ fill: '#94a3b8', fontWeight: 600 }}
+                                        dy={10}
+                                    />
+                                    <YAxis
+                                        fontSize={10}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
+                                        tick={{ fill: '#94a3b8', fontWeight: 600 }}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: 'transparent' }}
+                                        formatter={(val) => [formatMoney(val), 'Sales']}
+                                        contentStyle={{
+                                            borderRadius: '4px',
+                                            border: '1px solid #e2e8f0',
+                                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                                            fontSize: '12px',
+                                            fontWeight: 'bold'
+                                        }}
+                                    />
+                                    <Bar
+                                        dataKey="sales"
+                                        fill="#10b981"
+                                        radius={[2, 2, 0, 0]}
+                                        barSize={32}
+                                    >
+                                        <LabelList dataKey="sales" position="top" formatter={(v) => `₹${(v / 1000).toFixed(1)}k`} fontSize={10} fontWeight="bold" fill="#475569" offset={8} />
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                                <Icons.Money className="w-8 h-8 mb-2 opacity-30" />
+                                <p className="text-[10px] font-bold uppercase tracking-wider">No sales data available</p>
                             </div>
                         )}
                     </div>
