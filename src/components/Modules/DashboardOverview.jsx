@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
 import { Icons } from '../ui/Icons';
 import { Card } from '../ui/Card';
 import { formatDate, formatMoney } from '../../utils/helpers';
@@ -38,7 +38,7 @@ const sortMonths = (a, b) => {
 };
 
 export const DashboardOverview = ({ data, actions, setActiveTab }) => {
-    const { products, clients, tasks, quotesSent, rfqs } = data;
+    const { products, skus, clients, tasks, quotesSent, rfqs } = data;
 
     // Only count ACTIVE quotes in pipeline
     const activeQuotes = quotesSent.filter(q => q.status === 'Active');
@@ -70,30 +70,42 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
         const sources = Array.from(allSources);
 
         return {
-            data: sortedMonths.map(month => ({
-                month,
-                ...sources.reduce((acc, src) => ({ ...acc, [src]: monthData[month][src] || 0 }), {})
-            })),
-            sources
+            data: sortedMonths.map(month => {
+                const row = { month };
+                let total = 0;
+                sources.forEach(src => {
+                    const val = monthData[month][src] || 0;
+                    row[src] = val;
+                    total += val;
+                });
+                return { ...row, total, _totalLabel: 0 };
+            }),
+            sources: [...sources, '_totalLabel']
         };
     }, [clients]);
 
-    // Prepare Leads by Product Format Chart Data (monthly breakdown based on RFQs)
+    // Prepare Leads by Product Format Chart Data (monthly breakdown based on Clients/Leads)
     const leadsByFormatData = useMemo(() => {
         const monthData = {};
         const allFormats = new Set();
 
-        // For each RFQ, get the product format
-        rfqs?.forEach(rfq => {
-            const monthYear = getMonthYear(rfq.createdAt);
-            // Find the product to get its format
-            const product = products.find(p => p.id === rfq.productId);
-            const format = product?.format || 'Unknown';
+        clients?.forEach(client => {
+            const monthYear = getMonthYear(client.leadDate || client.createdAt);
+            if (!monthYear) return;
 
-            if (monthYear) {
+            const categories = client.categories || [];
+            
+            if (categories.length === 0) {
+                const format = 'Unknown';
                 allFormats.add(format);
                 if (!monthData[monthYear]) monthData[monthYear] = {};
                 monthData[monthYear][format] = (monthData[monthYear][format] || 0) + 1;
+            } else {
+                categories.forEach(format => {
+                    allFormats.add(format);
+                    if (!monthData[monthYear]) monthData[monthYear] = {};
+                    monthData[monthYear][format] = (monthData[monthYear][format] || 0) + 1;
+                });
             }
         });
 
@@ -101,13 +113,19 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
         const formats = Array.from(allFormats);
 
         return {
-            data: sortedMonths.map(month => ({
-                month,
-                ...formats.reduce((acc, fmt) => ({ ...acc, [fmt]: monthData[month][fmt] || 0 }), {})
-            })),
-            formats
+            data: sortedMonths.map(month => {
+                const row = { month };
+                let total = 0;
+                formats.forEach(fmt => {
+                    const val = monthData[month][fmt] || 0;
+                    row[fmt] = val;
+                    total += val;
+                });
+                return { ...row, total, _totalLabel: 0 };
+            }),
+            formats: [...formats, '_totalLabel']
         };
-    }, [rfqs, products]);
+    }, [clients]);
 
     return (
         <div className="space-y-6">
@@ -176,7 +194,13 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                     <div className="divide-y divide-slate-100 max-h-[288px] overflow-y-auto scroller">
                         {tasks.filter(t => t.status !== 'Completed').slice(0, 10).map(t => (
                             <div key={t.id} className="flex items-center gap-3 p-3 hover:bg-slate-50/50 transition-colors">
-                                <div className={`w-1.5 h-1.5 shrink-0 rounded-full ${t.priority === 'High' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'bg-blue-500'}`} />
+                                {t.priority === 'High' ? (
+                                    <Icons.AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                                ) : (
+                                    <div className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                    </div>
+                                )}
                                 <div className="flex-1 min-w-0">
                                     <div className="text-[13px] font-semibold text-slate-700 truncate">{t.title}</div>
                                     <div className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">
@@ -231,6 +255,7 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                                     />
                                     <Tooltip
                                         cursor={{ fill: 'transparent' }}
+                                        formatter={(val, name) => name?.startsWith('_') ? [null, null] : [val, name]}
                                         contentStyle={{
                                             borderRadius: '4px',
                                             border: '1px solid #e2e8f0',
@@ -243,15 +268,28 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                                         wrapperStyle={{ fontSize: '10px', fontWeight: 600 }}
                                         iconType="square"
                                         iconSize={8}
+                                        payload={leadsBySourceData.sources
+                                            .filter(s => s !== '_totalLabel')
+                                            .map((s, idx) => ({
+                                                value: s,
+                                                type: 'square',
+                                                id: s,
+                                                color: CHART_COLORS[idx % CHART_COLORS.length]
+                                            }))
+                                        }
                                     />
                                     {leadsBySourceData.sources.map((source, idx) => (
                                         <Bar
                                             key={source}
                                             dataKey={source}
                                             stackId="a"
-                                            fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                                            radius={idx === leadsBySourceData.sources.length - 1 ? [2, 2, 0, 0] : [0, 0, 0, 0]}
-                                        />
+                                            fill={source === '_totalLabel' ? 'transparent' : CHART_COLORS[idx % CHART_COLORS.length]}
+                                            radius={idx === leadsBySourceData.sources.length - 2 ? [2, 2, 0, 0] : [0, 0, 0, 0]}
+                                        >
+                                            {source === '_totalLabel' && (
+                                                <LabelList dataKey="total" position="top" fontSize={10} fontWeight="bold" fill="#475569" offset={8} />
+                                            )}
+                                        </Bar>
                                     ))}
                                 </BarChart>
                             </ResponsiveContainer>
@@ -292,6 +330,7 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                                     />
                                     <Tooltip
                                         cursor={{ fill: 'transparent' }}
+                                        formatter={(val, name) => name?.startsWith('_') ? [null, null] : [val, name]}
                                         contentStyle={{
                                             borderRadius: '4px',
                                             border: '1px solid #e2e8f0',
@@ -304,22 +343,35 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                                         wrapperStyle={{ fontSize: '10px', fontWeight: 600 }}
                                         iconType="square"
                                         iconSize={8}
+                                        payload={leadsByFormatData.formats
+                                            .filter(f => f !== '_totalLabel')
+                                            .map((f, idx) => ({
+                                                value: f,
+                                                type: 'square',
+                                                id: f,
+                                                color: CHART_COLORS[idx % CHART_COLORS.length]
+                                            }))
+                                        }
                                     />
                                     {leadsByFormatData.formats.map((format, idx) => (
                                         <Bar
                                             key={format}
                                             dataKey={format}
                                             stackId="a"
-                                            fill={CHART_COLORS[idx % CHART_COLORS.length]}
-                                            radius={idx === leadsByFormatData.formats.length - 1 ? [2, 2, 0, 0] : [0, 0, 0, 0]}
-                                        />
+                                            fill={format === '_totalLabel' ? 'transparent' : CHART_COLORS[idx % CHART_COLORS.length]}
+                                            radius={idx === leadsByFormatData.formats.length - 2 ? [2, 2, 0, 0] : [0, 0, 0, 0]}
+                                        >
+                                            {format === '_totalLabel' && (
+                                                <LabelList dataKey="total" position="top" fontSize={10} fontWeight="bold" fill="#475569" offset={8} />
+                                            )}
+                                        </Bar>
                                     ))}
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-slate-400">
                                 <Icons.Product className="w-8 h-8 mb-2 opacity-30" />
-                                <p className="text-[10px] font-bold uppercase tracking-wider">No RFQ data available</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider">No lead data available</p>
                             </div>
                         )}
                     </div>
