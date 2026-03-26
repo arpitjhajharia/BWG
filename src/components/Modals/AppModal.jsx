@@ -84,7 +84,11 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                 setForm(prev => ({
                     ...prev,
                     date: prev.date || new Date().toISOString().split('T')[0],
-                    currency: prev.currency || 'INR'
+                    currency: prev.currency || 'INR',
+                    paymentTerms: prev.paymentTerms?.length ? prev.paymentTerms : [
+                        { label: 'Advance Payment', percent: 100, amount: ((prev.amount || 0) - (prev.taxAmount || 0)).toFixed(2), status: 'Pending' },
+                        { label: 'GST / Tax Payment', percent: 100, type: 'tax', paidBase: 0, paidTax: 0, status: 'Pending' }
+                    ]
                 }));
             }
             // Sales Quote Defaults (multi-SKU)
@@ -267,7 +271,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
 
         // Order Validation
         if (col === 'orders') {
-            const totalPercent = (form.paymentTerms || []).reduce((sum, t) => sum + (parseFloat(t.percent) || 0), 0);
+            const totalPercent = (form.paymentTerms || []).filter(t => t.type !== 'tax').reduce((sum, t) => sum + (parseFloat(t.percent) || 0), 0);
             if (Math.abs(totalPercent - 100) > 0.1) {
                 alert(`Payment milestones must sum to 100%. Current sum: ${totalPercent}%`);
                 return;
@@ -468,10 +472,46 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
         setForm({ ...form, [field]: current });
     };
 
-    const handlePaymentTermAdd = () => setForm({ ...form, paymentTerms: [...(form.paymentTerms || []), { label: '', percent: 0, status: 'Pending' }] });
+    const handlePaymentTermAdd = () => {
+        const current = [...(form.paymentTerms || [])];
+        const baseAmount = (form.amount || 0) - (form.taxAmount || 0);
+
+        // Calculate currently assigned base total
+        const currentSumPercent = current.filter(t => t.type !== 'tax').reduce((acc, t) => acc + (parseFloat(t.percent) || 0), 0);
+        const currentSumAmount = current.filter(t => t.type !== 'tax').reduce((acc, t) => acc + (parseFloat(t.amount) || 0), 0);
+
+        const remainingPercent = Math.max(0, 100 - currentSumPercent);
+        const remainingAmount = Math.max(0, baseAmount - currentSumAmount);
+
+        const newMilestone = { 
+            label: '', 
+            percent: remainingPercent > 0 ? remainingPercent.toFixed(2) : 0, 
+            amount: remainingAmount > 0 ? remainingAmount.toFixed(2) : 0, 
+            status: 'Pending' 
+        };
+
+        const taxIdx = current.findIndex(t => t.type === 'tax');
+        if (taxIdx !== -1) {
+            current.splice(taxIdx, 0, newMilestone);
+        } else {
+            current.push(newMilestone);
+        }
+        setForm({ ...form, paymentTerms: current });
+    };
     const handlePaymentTermChange = (idx, field, value) => {
         const newTerms = [...(form.paymentTerms || [])];
-        newTerms[idx][field] = value;
+        const baseAmount = (form.amount || 0) - (form.taxAmount || 0);
+        const val = parseFloat(value) || 0;
+
+        if (field === 'percent') {
+            newTerms[idx].percent = value; // Keep as string for better typing? No, parseFloat is fine but let's be careful with display
+            newTerms[idx].amount = (baseAmount * (val / 100)).toFixed(2);
+        } else if (field === 'amount') {
+            newTerms[idx].amount = value;
+            newTerms[idx].percent = baseAmount > 0 ? (val / baseAmount * 100).toFixed(2) : 0;
+        } else {
+            newTerms[idx][field] = value;
+        }
         setForm({ ...form, paymentTerms: newTerms });
     };
     const handlePaymentTermDelete = (idx) => {
@@ -1135,7 +1175,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                 );
             }
             case 'order': {
-                const totalMilestonePercent = (form.paymentTerms || []).reduce((sum, t) => sum + (parseFloat(t.percent) || 0), 0);
+                const totalMilestonePercent = (form.paymentTerms || []).filter(t => t.type !== 'tax').reduce((sum, t) => sum + (parseFloat(t.percent) || 0), 0);
                 const percentError = Math.abs(totalMilestonePercent - 100) > 0.1;
 
                 return (
@@ -1330,25 +1370,60 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
 
                         <div className="border-t border-slate-100 pt-4">
                             <div className="flex justify-between items-center mb-2">
-                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Payment Terms</label>
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2">
+                                    Payment Terms (Splits on Base)
+                                    <span className="text-[9px] font-normal lowercase text-slate-400 font-bold">(TAX IS SEPARATE)</span>
+                                </label>
                                 <div className="flex items-center gap-2">
                                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${percentError ? 'text-red-600 bg-red-50 border-red-100' : 'text-green-600 bg-green-50 border-green-100'}`}>Sum: {totalMilestonePercent}%</span>
                                     <button onClick={handlePaymentTermAdd} className="text-[11px] text-blue-600 font-bold hover:underline">+ ADD MILESTONE</button>
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                {(form.paymentTerms || []).map((term, idx) => (
-                                    <div key={idx} className="flex gap-2 items-center bg-slate-50/50 p-1.5 rounded border border-slate-100">
-                                        <input placeholder="Label (e.g. Advance)" className="text-xs p-1.5 border border-slate-200 rounded flex-1 bg-white" value={term.label} onChange={e => handlePaymentTermChange(idx, 'label', e.target.value)} />
-                                        <div className="relative w-16">
-                                            <input type="number" className="text-xs p-1.5 border border-slate-200 rounded w-full pr-4 text-right bg-white" value={term.percent} onChange={e => handlePaymentTermChange(idx, 'percent', parseFloat(e.target.value))} />
-                                            <span className="absolute right-1 top-1.5 text-[10px] text-slate-400">%</span>
+                                {(form.paymentTerms || []).map((term, idx) => {
+                                    const bAmount = (form.amount || 0) - (form.taxAmount || 0);
+                                    const isTax = term.type === 'tax';
+                                    if (isTax) return null;
+                                    
+                                    return (
+                                        <div key={idx} className={`flex gap-2 items-center p-1.5 rounded border ${isTax ? 'bg-blue-50/30 border-blue-100' : 'bg-slate-50/50 border-slate-100'}`}>
+                                            <input 
+                                                placeholder={isTax ? "GST Payment Label" : "Label (e.g. Advance)"} 
+                                                className="text-xs p-1.5 border border-slate-200 rounded flex-1 bg-white" 
+                                                value={term.label} 
+                                                onChange={e => handlePaymentTermChange(idx, 'label', e.target.value)} 
+                                                readOnly={isTax}
+                                            />
+                                            <div className="relative w-16">
+                                                <input 
+                                                    type="number" 
+                                                    className={`text-xs p-1.5 border border-slate-200 rounded w-full pr-4 text-right bg-white ${isTax ? 'text-blue-600 font-bold' : ''}`} 
+                                                    value={term.percent} 
+                                                    onChange={e => handlePaymentTermChange(idx, 'percent', e.target.value)} 
+                                                    readOnly={isTax}
+                                                />
+                                                <span className="absolute right-1 top-1.5 text-[10px] text-slate-400">%</span>
+                                            </div>
+                                            <div className="relative w-28">
+                                                <span className="absolute left-1.5 top-1.5 text-[10px] text-slate-400 font-bold">{form.currency === 'INR' ? '₹' : '$'}</span>
+                                                <input 
+                                                    type="number" 
+                                                    className={`text-[11px] p-1.5 pl-4 border border-slate-200 rounded w-full text-right bg-white font-mono ${isTax ? 'text-blue-600 font-bold' : 'text-slate-700 font-bold'}`} 
+                                                    value={isTax ? (form.taxAmount || 0) : (term.amount || 0)} 
+                                                    onChange={e => !isTax && handlePaymentTermChange(idx, 'amount', e.target.value)}
+                                                    readOnly={isTax}
+                                                />
+                                            </div>
+                                            {!isTax && <button onClick={() => handlePaymentTermDelete(idx)} className="p-1 text-slate-300 hover:text-red-500"><Icons.X className="w-3.5 h-3.5" /></button>}
+                                            {isTax && <div className="w-5.5 h-5.5 flex items-center justify-center"><Icons.Lock className="w-3 h-3 text-blue-300" /></div>}
                                         </div>
-                                        <span className="text-[11px] font-mono font-bold text-slate-600 w-20 text-right">{formatMoney((form.amount || 0) * (term.percent / 100), form.currency)}</span>
-                                        <button onClick={() => handlePaymentTermDelete(idx)} className="p-1 text-slate-300 hover:text-red-500"><Icons.X className="w-3.5 h-3.5" /></button>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                                 {(form.paymentTerms?.length === 0 || !form.paymentTerms) && <div className="text-[11px] text-slate-400 italic text-center py-2 bg-slate-50/30 rounded border border-dashed">No payment milestones defined.</div>}
+                                <div className="flex justify-between items-center bg-blue-50/50 p-2 rounded border border-blue-100 text-[11px]">
+                                    <span className="font-bold text-blue-700 uppercase tracking-tight">GST / Tax Payment (Automatic)</span>
+                                    <span className="font-mono font-bold text-blue-600">{formatMoney(form.taxAmount || 0, form.currency)}</span>
+                                </div>
                             </div>
                         </div>
 

@@ -14,6 +14,7 @@ import { AdminPanel } from './components/modules/AdminPanel';
 import { ORSMaster } from './components/modules/ORSMaster';
 import { RFQMaster } from './components/modules/RFQMaster';
 import { Inventory } from './components/modules/Inventory';
+import { OrderMaster } from './components/modules/OrderMaster';
 import { HelpCenter } from './components/modules/HelpCenter';
 
 // Modals
@@ -44,6 +45,7 @@ function App() {
     { id: 'rfq', label: 'RFQs', icon: Icons.Mail },
     { id: 'vendors', label: 'Vendors', icon: Icons.Factory },
     { id: 'clients', label: 'Clients', icon: Icons.Users },
+    { id: 'orders', label: 'Orders', icon: Icons.Ledger },
     { id: 'quotes', label: 'Quotes', icon: Icons.Money },
     { id: 'tasks', label: 'Tasks', icon: Icons.Task },
     { id: 'inventory', label: 'Inventory', icon: Icons.Box },
@@ -140,6 +142,7 @@ function App() {
             {activeTab === 'rfq' && <RFQMaster data={data} actions={actions} setModal={setModal} />}
             {activeTab === 'vendors' && <CompanyMaster type="vendor" data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} currentUser={currentUser} />}
             {activeTab === 'clients' && <CompanyMaster type="client" data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} currentUser={currentUser} />}
+            {activeTab === 'orders' && <OrderMaster data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} />}
             {activeTab === 'quotes' && <QuotesTab data={data} actions={actions} setModal={setModal} currentUser={currentUser} />}
             {activeTab === 'tasks' && <TaskBoard data={data} actions={actions} setModal={setModal} />}
             {activeTab === 'inventory' && <Inventory data={data} actions={actions} setModal={setModal} />}

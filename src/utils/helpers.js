@@ -6,12 +6,12 @@ export const formatDate = (val) => {
     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).replace(/ /g, '-');
 };
 
-export const formatMoney = (amount, currency = 'INR') => {
+export const formatMoney = (amount, currency = 'INR', showDecimals = true) => {
     const num = amount || 0;
     return new Intl.NumberFormat('en-IN', {
         style: 'currency',
         currency: currency,
-        maximumFractionDigits: 2,
+        maximumFractionDigits: showDecimals ? 2 : 0,
         minimumFractionDigits: 0
     }).format(num);
 };

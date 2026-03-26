@@ -7,11 +7,11 @@ import { formatDate, formatMoney } from '../../utils/helpers';
 // Color palette for charts
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
-const StatCard = ({ title, value, icon: Icon }) => (
-    <div className="bg-white p-4 border border-slate-200 flex items-center justify-between shadow-sm">
+const StatCard = ({ title, value, icon: Icon, colorClass = "text-slate-800" }) => (
+    <div className="bg-white p-4 border border-slate-200 flex items-center justify-between shadow-sm rounded-lg">
         <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{title}</p>
-            <h3 className="text-xl font-bold text-slate-800">{value}</h3>
+            <h3 className={`text-xl font-bold ${colorClass}`}>{value}</h3>
         </div>
         <div className="p-2.5 bg-slate-50 text-slate-400 border border-slate-100 rounded">
             <Icon className="w-5 h-5" />
@@ -207,12 +207,15 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 border border-slate-200 rounded">Real-time Overview</div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <StatCard title="Total Pipeline" value={formatMoney(totalPipeline)} icon={Icons.Money} />
-                <StatCard title="Lifetime Revenue" value={formatMoney(lifetimeRev)} icon={Icons.Money} />
-                <StatCard title="Payment Received" value={formatMoney(paidRev)} icon={Icons.Money} />
-                <StatCard title="Payment Receivable" value={formatMoney(pendingRev)} icon={Icons.Money} />
-                <StatCard title="Payment Payable" value={formatMoney(pendingExp)} icon={Icons.Money} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <StatCard title="Total Pipeline" value={formatMoney(totalPipeline, 'INR', false)} icon={Icons.Money} />
+                <StatCard title="Lifetime Revenue" value={formatMoney(lifetimeRev, 'INR', false)} icon={Icons.Money} />
+                <StatCard 
+                    title={pendingRev >= pendingExp ? "Net Receivable" : "Net Payable"} 
+                    value={formatMoney(Math.abs(pendingRev - pendingExp), 'INR', false)} 
+                    icon={Icons.Money} 
+                    colorClass={pendingRev >= pendingExp ? "text-emerald-600" : "text-rose-600"}
+                />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

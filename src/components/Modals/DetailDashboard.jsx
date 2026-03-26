@@ -115,12 +115,12 @@ const CompactOrderRow = ({ order, skus, products, actions, setModal, updateOrder
                     {!isVendor && totalMargin !== null && (
                         <div className="flex flex-col items-end">
                             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter leading-none mb-1">Margin</span>
-                            <span className={`text-[12px] font-bold ${totalMargin >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatMoney(totalMargin, order.currency)}</span>
+                            <span className={`text-[12px] font-bold ${totalMargin >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatMoney(totalMargin, order.currency, false)}</span>
                         </div>
                     )}
                     <div className="flex flex-col items-end">
                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter leading-none mb-1">Total</span>
-                        <span className="text-[13px] font-bold text-slate-900">{formatMoney(order.amount, order.currency)}</span>
+                        <span className="text-[13px] font-bold text-slate-900">{formatMoney(order.amount, order.currency, false)}</span>
                     </div>
                 </div>
 
@@ -129,16 +129,25 @@ const CompactOrderRow = ({ order, skus, products, actions, setModal, updateOrder
                 </div>
             </div>
 
-            {isExpanded && (
-                <div className="ml-10 mt-3 mb-4 grid grid-cols-2 gap-8 text-[11px] animate-fade-in bg-slate-50/30 p-4 rounded-lg border border-slate-50">
-                    <div>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">Payment Milestones</p>
-                        <div className="space-y-1">
-                            {(order.paymentTerms || []).map((term, i) => {
-                                const mPercent = term.percent / 100;
-                                const mBase = (order.amount - (order.taxAmount || 0)) * mPercent;
-                                const mTax = (order.taxAmount || 0) * mPercent;
-                                const mTotal = order.amount * mPercent;
+                    {isExpanded && (
+                        <div className="ml-10 mt-3 mb-4 grid grid-cols-2 gap-8 text-[11px] animate-fade-in bg-slate-50/30 p-4 rounded-lg border border-slate-50">
+                            <div>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">Payment Milestones</p>
+                                <div className="space-y-1">
+                                    {(() => {
+                                        const displayTerms = [...(order.paymentTerms || [])];
+                                        if (!displayTerms.some(t => t.type === 'tax')) {
+                                            displayTerms.push({ label: 'GST / Tax Payment', percent: 100, type: 'tax', paidBase: 0, paidTax: 0, status: 'Pending' });
+                                        }
+                                        
+                                        return displayTerms.map((term, i) => {
+                                            const mPercent = term.percent / 100;
+                                            const isTaxMilestone = term.type === 'tax';
+                                            const bTotal = (order.amount - (order.taxAmount || 0));
+                                            
+                                            const mBase = isTaxMilestone ? 0 : bTotal * mPercent;
+                                            const mTax = isTaxMilestone ? (order.taxAmount || 0) : 0;
+                                            const mTotal = mBase + mTax;
                                 
                                 const pBase = parseFloat(term.paidBase || 0);
                                 const pTax = parseFloat(term.paidTax || 0);
@@ -150,7 +159,10 @@ const CompactOrderRow = ({ order, skus, products, actions, setModal, updateOrder
                                         <div className="flex justify-between items-center">
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] font-bold text-slate-700 uppercase tracking-tight">{term.label} ({term.percent}%)</span>
-                                                <span className="text-[9px] text-slate-400 font-bold uppercase tabular-nums">Total: {formatMoney(mTotal, order.currency)}</span>
+                                                <p className="text-[10px] text-slate-500 mb-1 flex justify-between">
+                                                    <span>Target: <span className="font-mono font-bold text-slate-700">{formatMoney(mTotal, order.currency, false)}</span></span>
+                                                    <span className="font-mono text-[9px] text-slate-400">({mBase.toFixed(0)} Base + {mTax.toFixed(0)} Tax)</span>
+                                                </p>
                                             </div>
                                             {isDone ? (
                                                 <div className="flex items-center gap-1.5 bg-green-50 text-green-600 px-2 py-0.5 rounded border border-green-100">
@@ -162,38 +174,42 @@ const CompactOrderRow = ({ order, skus, products, actions, setModal, updateOrder
                                             )}
                                         </div>
                                         
-                                        <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-50">
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between items-center text-[8px] font-bold text-slate-400 uppercase">
-                                                    <span>Base ({formatMoney(mBase, order.currency)})</span>
-                                                    {pBase > 0 && <span className="text-green-600">Paid: {formatMoney(pBase, order.currency)}</span>}
+                                        <div className="pt-1 border-t border-slate-50">
+                                            {isTaxMilestone ? (
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between items-center text-[8px] font-bold text-slate-400 uppercase">
+                                                        <span>Tax Amount ({formatMoney(mTax, order.currency)})</span>
+                                                        {pTax > 0 && <span className="text-green-600">Paid: {formatMoney(pTax, order.currency)}</span>}
+                                                    </div>
+                                                    <input 
+                                                        type="number" 
+                                                        placeholder={`Target: ${mTax.toFixed(2)}`}
+                                                        className="w-full text-[10px] p-1 border border-blue-200 rounded focus:border-blue-400 outline-none bg-blue-50/20 font-mono"
+                                                        value={term.paidTax || ''}
+                                                        onChange={(e) => updateOrderPayment(order, i, 'paidTax', e.target.value)}
+                                                    />
                                                 </div>
-                                                <input 
-                                                    type="number" 
-                                                    placeholder={`Target: ${mBase.toFixed(2)}`}
-                                                    className="w-full text-[10px] p-1 border border-slate-200 rounded focus:border-blue-400 outline-none bg-white font-mono"
-                                                    value={term.paidBase || ''}
-                                                    onChange={(e) => updateOrderPayment(order, i, 'paidBase', e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between items-center text-[8px] font-bold text-slate-400 uppercase">
-                                                    <span>Tax ({formatMoney(mTax, order.currency)})</span>
-                                                    {pTax > 0 && <span className="text-green-600">Paid: {formatMoney(pTax, order.currency)}</span>}
+                                            ) : (
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between items-center text-[8px] font-bold text-slate-400 uppercase">
+                                                        <span>Base Amount ({formatMoney(mBase, order.currency)})</span>
+                                                        {pBase > 0 && <span className="text-green-600">Paid: {formatMoney(pBase, order.currency)}</span>}
+                                                    </div>
+                                                    <input 
+                                                        type="number" 
+                                                        placeholder={`Target: ${mBase.toFixed(2)}`}
+                                                        className="w-full text-[10px] p-1 border border-slate-200 rounded focus:border-blue-400 outline-none bg-white font-mono"
+                                                        value={term.paidBase || ''}
+                                                        onChange={(e) => updateOrderPayment(order, i, 'paidBase', e.target.value)}
+                                                    />
                                                 </div>
-                                                <input 
-                                                    type="number" 
-                                                    placeholder={`Target: ${mTax.toFixed(2)}`}
-                                                    className="w-full text-[10px] p-1 border border-slate-200 rounded focus:border-blue-400 outline-none bg-white font-mono"
-                                                    value={term.paidTax || ''}
-                                                    onChange={(e) => updateOrderPayment(order, i, 'paidTax', e.target.value)}
-                                                />
-                                            </div>
+                                            )}
                                         </div>
                                         <div className="text-[8px] italic text-slate-400 px-1">Values update in real-time. Status auto-completes on full payment.</div>
                                     </div>
                                 );
                             })}
+                        )()}
                         </div>
                     </div>
                     <div>
@@ -300,16 +316,24 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
 
     // Handlers
     const updateOrderPayment = async (order, termIdx, field, value) => {
-        const newTerms = [...order.paymentTerms];
+        let newTerms = [...(order.paymentTerms || [])];
+        
+        // If the tax milestone doesn't exist yet in DB but is being updated from UI (displayTerms)
+        if (termIdx === newTerms.length && !newTerms.some(t => t.type === 'tax')) {
+            newTerms.push({ label: 'GST / Tax Payment', percent: 100, type: 'tax', paidBase: 0, paidTax: 0, status: 'Pending' });
+        }
+        
         const numVal = parseFloat(value) || 0;
         newTerms[termIdx][field] = numVal;
         
         // Auto-update status if total paid equals target amount (with rounding tolerance)
+        const isTaxMilestone = newTerms[termIdx].type === 'tax';
         const mPercent = newTerms[termIdx].percent / 100;
-        const mTotal = order.amount * mPercent;
-        const pTotal = (newTerms[termIdx].paidBase || 0) + (newTerms[termIdx].paidTax || 0);
+        const bTotal = (order.amount - (order.taxAmount || 0));
+        const mTarget = isTaxMilestone ? (order.taxAmount || 0) : bTotal * mPercent;
+        const pTotal = isTaxMilestone ? (newTerms[termIdx].paidTax || 0) : (newTerms[termIdx].paidBase || 0);
         
-        if (pTotal >= (mTotal - 1)) {
+        if (pTotal >= (mTarget - 1)) {
             newTerms[termIdx].status = 'Paid';
         } else {
             newTerms[termIdx].status = 'Pending';
@@ -444,22 +468,22 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
                     <div className="flex gap-16 mb-12">
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Potential</p>
-                            <h3 className={`text-xl font-bold tracking-tight ${isVendor ? 'text-purple-600' : 'text-blue-600'}`}>{formatMoney(potentialValue)}</h3>
+                            <h3 className={`text-xl font-bold tracking-tight ${isVendor ? 'text-purple-600' : 'text-blue-600'}`}>{formatMoney(potentialValue, 'INR', false)}</h3>
                         </div>
                         <div className="w-px h-8 bg-slate-100 my-auto"></div>
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{isVendor ? 'Total Purchases' : 'Lifetime Revenue'}</p>
-                            <h3 className="text-xl font-bold tracking-tight text-slate-900">{formatMoney(totalOrderValue)}</h3>
+                            <h3 className="text-xl font-bold tracking-tight text-slate-900">{formatMoney(totalOrderValue, 'INR', false)}</h3>
                         </div>
                         <div className="w-px h-8 bg-slate-100 my-auto"></div>
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Payment Done</p>
-                            <h3 className="text-xl font-bold tracking-tight text-emerald-600">{formatMoney(totalPaidValue)}</h3>
+                            <h3 className="text-xl font-bold tracking-tight text-emerald-600">{formatMoney(totalPaidValue, 'INR', false)}</h3>
                         </div>
                         <div className="w-px h-8 bg-slate-100 my-auto"></div>
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Payment Pending</p>
-                            <h3 className="text-xl font-bold tracking-tight text-amber-600">{formatMoney(totalPendingValue)}</h3>
+                            <h3 className="text-xl font-bold tracking-tight text-amber-600">{formatMoney(totalPendingValue, 'INR', false)}</h3>
                         </div>
                     </div>
 
