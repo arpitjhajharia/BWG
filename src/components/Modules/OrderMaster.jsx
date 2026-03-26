@@ -123,6 +123,7 @@ export const OrderMaster = ({ data, actions, setModal, setDetailView, currentUse
                             <th className="px-4 py-2 text-right">Base</th>
                             <th className="px-4 py-2 text-right whitespace-nowrap">{view === 'sales' ? 'Paid' : 'Sent'}</th>
                             <th className="px-4 py-2 text-right">Pending</th>
+                            <th className="px-4 py-2 w-10"></th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50 text-[12px]">
@@ -139,8 +140,8 @@ export const OrderMaster = ({ data, actions, setModal, setDetailView, currentUse
                                 <td className="px-4 py-1.5 tabular-nums">
                                     <span className="font-mono text-[11px] font-bold text-slate-600 group-hover:text-blue-600">#{order.orderId}</span>
                                 </td>
-                                <td className="px-4 py-1.5 font-bold text-slate-800 uppercase tracking-tight whitespace-nowrap">{order.companyName}</td>
-                                <td className="px-4 py-1.5 font-semibold text-slate-600">
+                                <td className="px-4 py-1.5 font-bold text-slate-800 uppercase tracking-tight whitespace-nowrap text-xs">{order.companyName}</td>
+                                <td className="px-4 py-1.5 font-semibold text-slate-600 text-xs">
                                     {order.skuName}
                                 </td>
                                 <td className="px-4 py-1.5 text-right font-bold text-slate-500 tabular-nums">{order.qty}</td>
@@ -151,6 +152,21 @@ export const OrderMaster = ({ data, actions, setModal, setDetailView, currentUse
                                     {order.unpaid > 0 && order.unpaid > order.amount * 0.9 && (
                                         <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-full bg-red-400/50" title="High Outstanding"></div>
                                     )}
+                                </td>
+                                <td className="px-4 py-1.5 text-right">
+                                    <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (confirm('Delete this order entry permanently?')) {
+                                                    actions.del('orders', order.id);
+                                                }
+                                            }}
+                                            className="p-1 hover:bg-red-50 text-slate-300 hover:text-red-500 rounded transition-colors"
+                                        >
+                                            <Icons.Trash className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

@@ -47,38 +47,36 @@ export const DashboardOverview = ({ data, actions, setActiveTab }) => {
     const activeQuotes = quotesSent.filter(q => q.status === 'Active');
     const totalPipeline = activeQuotes.reduce((acc, q) => acc + normalize(parseFloat(q.sellingPrice || 0) * (parseFloat(q.moq || 0)), q.currency), 0);
 
-    const clientPOs = (orders || []).filter(o => clients.some(c => c.id === o.companyId));
-    const vendorPOs = (orders || []).filter(o => vendors.some(v => v.id === o.companyId));
+    // Consolidated Order Metrics - matching OrderMaster logic
+    const { lifetimeRev, pendingRev, lifetimeExp, pendingExp } = useMemo(() => {
+        let lRev = 0, pRev = 0, lExp = 0, pExp = 0;
 
-    // Lifetime Revenue: Total sum of all order lines
-    const lifetimeRev = clientPOs.reduce((acc, o) => acc + normalize(parseFloat(o.amount || 0), o.currency || 'INR'), 0);
+        (orders || []).forEach(o => {
+            const isClient = clients.some(c => c.id === o.companyId);
+            const isVendor = vendors.some(v => v.id === o.companyId);
+            if (!isClient && !isVendor) return;
 
-    // Payment Received: Group by Order ID to avoid multi-line double counting
-    const clientOrderPayments = {};
-    clientPOs.forEach(o => {
-        const key = `${o.companyId}_${o.orderId || o.id}`;
-        if (!clientOrderPayments[key]) {
             let paid = 0;
-            (o.paymentTerms || []).forEach(t => paid += (parseFloat(t.paidBase) || 0) + (parseFloat(t.paidTax) || 0));
-            clientOrderPayments[key] = normalize(paid, o.currency || 'INR');
-        }
-    });
-    const paidRev = Object.values(clientOrderPayments).reduce((sum, val) => sum + val, 0);
-    const pendingRev = lifetimeRev - paidRev;
+            (o.paymentTerms || []).forEach(t => {
+                paid += (parseFloat(t.paidBase) || 0) + (parseFloat(t.paidTax) || 0);
+            });
 
-    // Payment Payable: Total sum of all vendor lines - Total paid to vendors
-    const lifetimeExp = vendorPOs.reduce((acc, o) => acc + normalize(parseFloat(o.amount || 0), o.currency || 'INR'), 0);
-    const vendorOrderPayments = {};
-    vendorPOs.forEach(o => {
-        const key = `${o.companyId}_${o.orderId || o.id}`;
-        if (!vendorOrderPayments[key]) {
-            let paid = 0;
-            (o.paymentTerms || []).forEach(t => paid += (parseFloat(t.paidBase) || 0) + (parseFloat(t.paidTax) || 0));
-            vendorOrderPayments[key] = normalize(paid, o.currency || 'INR');
-        }
-    });
-    const paidExp = Object.values(vendorOrderPayments).reduce((sum, val) => sum + val, 0);
-    const pendingExp = lifetimeExp - paidExp;
+            const amount = parseFloat(o.amount || 0);
+            const nAmount = normalize(amount, o.currency || 'INR');
+            const nPaid = normalize(paid, o.currency || 'INR');
+            const nPending = Math.max(0, nAmount - nPaid);
+
+            if (isClient) {
+                lRev += nAmount;
+                pRev += nPending;
+            } else {
+                lExp += nAmount;
+                pExp += nPending;
+            }
+        });
+
+        return { lifetimeRev: lRev, pendingRev: pRev, lifetimeExp: lExp, pendingExp: pExp };
+    }, [orders, clients, vendors, usdRate]);
 
     // Prepare Chart Data (Forecast) - Stacked by Client
     const forecastData = useMemo(() => {
