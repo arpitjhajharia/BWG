@@ -621,6 +621,8 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
                                                 isVendor={isVendor}
                                                 setModal={setModal}
                                                 settings={settings}
+                                                actions={actions}
+                                                currentUser={currentUser}
                                             />
                                         );
                                     })}
@@ -636,7 +638,7 @@ export const DetailDashboard = ({ detailView, setDetailView, data, actions, setM
 };
 
 // --- Local Quote Card Component ---
-const QuoteCard = ({ sku, product, latestQuote, historyQuotes, isVendor, setModal, settings }) => {
+const QuoteCard = ({ sku, product, latestQuote, historyQuotes, isVendor, setModal, settings, actions, currentUser }) => {
     const [showHistory, setShowHistory] = useState(false);
     const usdRate = parseFloat(settings?.usdToInrRate) || 1;
     const rate = isVendor ? (latestQuote.price || 0) : (latestQuote.sellingPrice || 0);
@@ -670,12 +672,24 @@ const QuoteCard = ({ sku, product, latestQuote, historyQuotes, isVendor, setModa
                         {sku?.variant}
                     </span>
                 </div>
-                <button
-                    onClick={() => setModal({ open: true, type: isVendor ? 'quoteReceived' : 'quoteSent', data: latestQuote, isEdit: true })}
-                    className="p-1 opacity-0 group-hover/card:opacity-100 hover:bg-slate-50 rounded text-slate-400 hover:text-blue-600 transition-all shadow-sm"
-                >
-                    <Icons.Edit className="w-3 h-3" />
-                </button>
+                <div className="flex items-center gap-1 opacity-0 group-hover/card:opacity-100 transition-all">
+                    <button
+                        onClick={() => setModal({ open: true, type: isVendor ? 'quoteReceived' : 'quoteSent', data: latestQuote, isEdit: true })}
+                        className="p-1 hover:bg-slate-50 rounded text-slate-400 hover:text-blue-600 transition-all shadow-sm"
+                        title="Edit Quote"
+                    >
+                        <Icons.Edit className="w-3 h-3" />
+                    </button>
+                    {currentUser?.role === 'Admin' && (
+                        <button
+                            onClick={() => { if (confirm('Delete quote?')) actions.del(isVendor ? 'quotesReceived' : 'quotesSent', latestQuote.id) }}
+                            className="p-1 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-all shadow-sm"
+                            title="Delete Quote"
+                        >
+                            <Icons.Trash className="w-3 h-3" />
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Metrics Row (Consolidated & Compact) */}
@@ -737,12 +751,24 @@ const QuoteCard = ({ sku, product, latestQuote, historyQuotes, isVendor, setModa
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <span className="text-[10px] font-medium text-slate-500 tabular-nums">{qShortDate}</span>
-                                            <button
-                                                onClick={() => setModal({ open: true, type: isVendor ? 'quoteReceived' : 'quoteSent', data: q, isEdit: true })}
-                                                className="p-1 opacity-0 group-hover/row:opacity-100 text-slate-300 hover:text-blue-500"
-                                            >
-                                                <Icons.Edit className="w-2.5 h-2.5" />
-                                            </button>
+                                            <div className="flex items-center gap-1 opacity-0 group-hover/row:opacity-100 transition-all">
+                                                <button
+                                                    onClick={() => setModal({ open: true, type: isVendor ? 'quoteReceived' : 'quoteSent', data: q, isEdit: true })}
+                                                    className="p-1 text-slate-300 hover:text-blue-500 transition-colors"
+                                                    title="Edit Quote"
+                                                >
+                                                    <Icons.Edit className="w-2.5 h-2.5" />
+                                                </button>
+                                                {currentUser?.role === 'Admin' && (
+                                                    <button
+                                                        onClick={() => { if (confirm('Delete quote?')) actions.del(isVendor ? 'quotesReceived' : 'quotesSent', q.id) }}
+                                                        className="p-1 text-slate-300 hover:text-red-500 transition-colors"
+                                                        title="Delete Quote"
+                                                    >
+                                                        <Icons.Trash className="w-2.5 h-2.5" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 );

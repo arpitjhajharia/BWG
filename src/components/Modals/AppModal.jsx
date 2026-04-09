@@ -226,6 +226,13 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
         return filtered;
     }, [cleanSkus, quotesReceived, isVendorOrder, form.companyId, modal.type]);
 
+    // --- SORTED DATA FOR DROPDOWNS ---
+    const sortedSkus = useMemo(() => [...cleanSkus].sort((a,b) => (a.name||'').localeCompare(b.name||'')), [cleanSkus]);
+    const sortedClients = useMemo(() => [...clients].sort((a,b) => (a.companyName||'').localeCompare(b.companyName||'')), [clients]);
+    const sortedVendors = useMemo(() => [...vendors].sort((a,b) => (a.companyName||'').localeCompare(b.companyName||'')), [vendors]);
+    const sortedUnlinkedSkus = useMemo(() => [...unlinkedSkus].sort((a,b) => (a.name||'').localeCompare(b.name||'')), [unlinkedSkus]);
+    const sortedAvailableSkus = useMemo(() => [...availableSkus].sort((a,b) => (a.name||'').localeCompare(b.name||'')), [availableSkus]);
+
     // --- HANDLERS ---
 
     const submit = async () => {
@@ -812,17 +819,31 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                         <div className="space-y-3">
                             <div>
                                 <label className="block text-[11px] font-bold text-blue-600 uppercase tracking-wide mb-1">Related Client</label>
-                                <select className="w-full p-2 border border-blue-200 rounded text-[13px] bg-blue-50/30" value={form.relatedId || ''} onChange={e => { const c = clients.find(x => x.id === e.target.value); setForm({ ...form, relatedId: c.id, relatedName: c.companyName }); }}>
-                                    <option>Select Client...</option>
-                                    {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
-                                </select>
+                                <input
+                                    list="client-list-all"
+                                    className="w-full p-2 border border-blue-200 rounded text-[13px] bg-blue-50/30 outline-none"
+                                    placeholder="Search Client..."
+                                    value={form.relatedName || clients.find(c => c.id === form.relatedId)?.companyName || ''}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const match = clients.find(c => c.companyName === val);
+                                        setForm({ ...form, relatedName: val, relatedId: match ? match.id : '' });
+                                    }}
+                                />
                             </div>
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Link Vendor (Optional)</label>
-                                <select className="w-full p-2 border border-slate-200 rounded text-[13px] bg-slate-50" value={form.secondaryVendorId || ''} onChange={e => setForm({ ...form, secondaryVendorId: e.target.value })}>
-                                    <option value="">No linked vendor</option>
-                                    {vendors.map(v => <option key={v.id} value={v.id}>{v.companyName}</option>)}
-                                </select>
+                                <input
+                                    list="vendor-list-all"
+                                    className="w-full p-2 border border-slate-200 rounded text-[13px] bg-slate-50 outline-none"
+                                    placeholder="Search linked vendor..."
+                                    value={vendors.find(v => v.id === form.secondaryVendorId)?.companyName || form.secVendorSearch || ''}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const match = vendors.find(v => v.companyName === val);
+                                        setForm({ ...form, secVendorSearch: val, secondaryVendorId: match ? match.id : '' });
+                                    }}
+                                />
                             </div>
                         </div>
                     )}
@@ -830,17 +851,31 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                         <div className="space-y-3">
                             <div>
                                 <label className="block text-[11px] font-bold text-purple-600 uppercase tracking-wide mb-1">Related Vendor</label>
-                                <select className="w-full p-2 border border-purple-200 rounded text-[13px] bg-purple-50/30" value={form.relatedId || ''} onChange={e => { const v = vendors.find(x => x.id === e.target.value); setForm({ ...form, relatedId: v.id, relatedName: v.companyName }); }}>
-                                    <option>Select Vendor...</option>
-                                    {vendors.map(v => <option key={v.id} value={v.id}>{v.companyName}</option>)}
-                                </select>
+                                <input
+                                    list="vendor-list-all"
+                                    className="w-full p-2 border border-purple-200 rounded text-[13px] bg-purple-50/30 outline-none"
+                                    placeholder="Search Vendor..."
+                                    value={form.relatedName || vendors.find(v => v.id === form.relatedId)?.companyName || ''}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const match = vendors.find(v => v.companyName === val);
+                                        setForm({ ...form, relatedName: val, relatedId: match ? match.id : '' });
+                                    }}
+                                />
                             </div>
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Link Client (Optional)</label>
-                                <select className="w-full p-2 border border-slate-200 rounded text-[13px] bg-slate-50" value={form.secondaryClientId || ''} onChange={e => setForm({ ...form, secondaryClientId: e.target.value })}>
-                                    <option value="">No linked client</option>
-                                    {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
-                                </select>
+                                <input
+                                    list="client-list-all"
+                                    className="w-full p-2 border border-slate-200 rounded text-[13px] bg-slate-50 outline-none"
+                                    placeholder="Search linked client..."
+                                    value={clients.find(c => c.id === form.secondaryClientId)?.companyName || form.secClientSearch || ''}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const match = clients.find(c => c.companyName === val);
+                                        setForm({ ...form, secClientSearch: val, secondaryClientId: match ? match.id : '' });
+                                    }}
+                                />
                             </div>
                         </div>
                     )}
@@ -868,15 +903,19 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                     <div className="grid grid-cols-2 gap-4">
                          <div>
                             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Vendor / Party</label>
-                            <select 
-                                className={`w-full p-2 border border-slate-300 rounded text-[13px] ${!!modal.data?.vendorId ? 'bg-slate-50 cursor-not-allowed text-slate-500' : 'bg-white'}`} 
-                                value={form.vendorId || ''} 
-                                onChange={e => setForm({ ...form, vendorId: e.target.value })}
+                            <input 
+                                className={`w-full p-2 border border-slate-300 rounded text-[13px] outline-none ${!!modal.data?.vendorId ? 'bg-slate-50 cursor-not-allowed text-slate-500' : 'bg-white'}`} 
+                                placeholder="Search Vendor..."
+                                value={vendors.find(v => v.id === form.vendorId)?.companyName || form.vendorSearch || ''} 
+                                onChange={e => {
+                                    if (!!modal.data?.vendorId) return;
+                                    const val = e.target.value;
+                                    const match = vendors.find(v => v.companyName === val);
+                                    setForm({ ...form, vendorSearch: val, vendorId: match ? match.id : '' });
+                                }}
+                                list="vendor-list-all"
                                 disabled={!!modal.data?.vendorId}
-                            >
-                                <option>Select Vendor...</option>
-                                {vendors.map(v => <option key={v.id} value={v.id}>{v.companyName}</option>)}
-                            </select>
+                            />
                         </div>
                         <div>
                             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Quote ID / Ref</label>
@@ -917,18 +956,24 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                                                 }} className="text-red-400 hover:text-red-600"><Icons.Trash className="w-3.5 h-3.5" /></button>
                                             )}
                                         </div>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            <div className="col-span-1">
-                                                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">SKU</label>
-                                                <select className="w-full p-1.5 border border-slate-300 rounded text-[12px] bg-white" value={line.skuId || ''} onChange={e => {
+                                        <div>
+                                            <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">SKU</label>
+                                            <input 
+                                                list="sku-list-all"
+                                                className="w-full p-1.5 border border-slate-300 rounded text-[12px] bg-white outline-none" 
+                                                placeholder="Search SKU..."
+                                                value={cleanSkus.find(s => s.id === line.skuId)?.name || line.skuSearch || ''} 
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    const match = cleanSkus.find(s => s.name === val);
                                                     const newLines = [...form.lineItems];
-                                                    newLines[idx].skuId = e.target.value;
+                                                    newLines[idx].skuSearch = val;
+                                                    newLines[idx].skuId = match ? match.id : '';
                                                     setForm({ ...form, lineItems: newLines });
-                                                }}>
-                                                    <option value="">Select SKU...</option>
-                                                    {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                </select>
-                                            </div>
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">MOQ</label>
                                                 <input type="number" className="w-full p-1.5 border border-slate-300 rounded text-[12px]" value={line.moq || ''} onChange={e => {
@@ -960,10 +1005,17 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU</label>
-                                    <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
-                                        <option>Select SKU...</option>
-                                        {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
+                                    <input 
+                                        list="sku-list-all"
+                                        className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold outline-none" 
+                                        placeholder="Search SKU..."
+                                        value={cleanSkus.find(s => s.id === form.skuId)?.name || form.skuSearch || ''} 
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            const match = cleanSkus.find(s => s.name === val);
+                                            setForm({ ...form, skuSearch: val, skuId: match ? match.id : '' });
+                                        }}
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">MOQ</label>
@@ -1019,15 +1071,19 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             </div>
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Client / Party</label>
-                                <select 
-                                    className={`w-full p-2 border border-slate-300 rounded text-[13px] ${!!modal.data?.clientId ? 'bg-slate-50 cursor-not-allowed text-slate-500' : 'bg-white'}`} 
-                                    value={form.clientId || ''} 
-                                    onChange={e => setForm({ ...form, clientId: e.target.value })}
+                                <input 
+                                    list="client-list-all"
+                                    className={`w-full p-2 border border-slate-300 rounded text-[13px] outline-none ${!!modal.data?.clientId ? 'bg-slate-50 cursor-not-allowed text-slate-500' : 'bg-white font-bold'}`} 
+                                    placeholder="Search Client..."
+                                    value={clients.find(c => c.id === form.clientId)?.companyName || form.clientSearch || ''} 
+                                    onChange={e => {
+                                        if (!!modal.data?.clientId) return;
+                                        const val = e.target.value;
+                                        const match = clients.find(c => c.companyName === val);
+                                        setForm({ ...form, clientSearch: val, clientId: match ? match.id : '' });
+                                    }}
                                     disabled={!!modal.data?.clientId}
-                                >
-                                    <option>Select Client...</option>
-                                    {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
-                                </select>
+                                />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -1060,14 +1116,22 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                                                     <button onClick={() => removeLine(idx)} className="p-0.5 text-slate-300 hover:text-red-500 transition-colors"><Icons.X className="w-3.5 h-3.5" /></button>
                                                 )}
                                             </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">SKU</label>
+                                                <input 
+                                                    list="sku-list-all"
+                                                    className="w-full p-1.5 border border-slate-300 rounded text-[12px] bg-white font-semibold outline-none" 
+                                                    placeholder="Search SKU..."
+                                                    value={cleanSkus.find(s => s.id === line.skuId)?.name || line.skuSearch || ''} 
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        const match = cleanSkus.find(s => s.name === val);
+                                                        handleLineChange(idx, 'skuSearch', val);
+                                                        handleLineChange(idx, 'skuId', match ? match.id : '');
+                                                    }}
+                                                />
+                                            </div>
                                             <div className="grid grid-cols-3 gap-3">
-                                                <div className="col-span-2">
-                                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">SKU</label>
-                                                    <select className="w-full p-1.5 border border-slate-300 rounded text-[12px] bg-white font-semibold" value={line.skuId || ''} onChange={e => handleLineChange(idx, 'skuId', e.target.value)}>
-                                                        <option>Select SKU...</option>
-                                                        {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                    </select>
-                                                </div>
                                                 <div>
                                                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Status</label>
                                                     <select className="w-full p-1.5 border border-slate-300 rounded text-[12px] bg-white font-semibold" value={line.status || 'Draft'} onChange={e => handleLineChange(idx, 'status', e.target.value)}>
@@ -1076,8 +1140,6 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                                                         <option>Closed</option>
                                                     </select>
                                                 </div>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-3">
                                                 <div>
                                                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">MOQ</label>
                                                     <input type="number" className="w-full p-1.5 border border-slate-300 rounded text-[12px]" placeholder="0" value={line.moq || ''} onChange={e => handleLineChange(idx, 'moq', e.target.value)} />
@@ -1124,10 +1186,17 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU</label>
-                                        <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
-                                            <option>Select SKU...</option>
-                                            {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                        </select>
+                                        <input 
+                                            list="sku-list-all"
+                                            className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold outline-none" 
+                                            placeholder="Search SKU..."
+                                            value={cleanSkus.find(s => s.id === form.skuId)?.name || form.skuSearch || ''} 
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                const match = cleanSkus.find(s => s.name === val);
+                                                setForm({ ...form, skuSearch: val, skuId: match ? match.id : '' });
+                                            }}
+                                        />
                                     </div>
                                     <div>
                                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">MOQ</label>
@@ -1228,27 +1297,33 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                                                         }} className="text-red-400 hover:text-red-600"><Icons.Trash className="w-3.5 h-3.5" /></button>
                                                     )}
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">SKU</label>
+                                                    <input 
+                                                        list="sku-list-available"
+                                                        className="w-full p-1.5 border border-slate-300 rounded text-[12px] bg-white outline-none" 
+                                                        placeholder="Search SKU..."
+                                                        value={availableSkus.find(s => s.id === line.skuId)?.name || line.skuSearch || ''} 
+                                                        onChange={e => {
+                                                            const val = e.target.value;
+                                                            const match = availableSkus.find(s => s.name === val);
+                                                            handleLineChange('skuSearch', val);
+                                                            handleLineChange('skuId', match ? match.id : '');
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-1.5">
                                                     <div>
-                                                        <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">SKU</label>
-                                                        <select className="w-full p-1.5 border border-slate-300 rounded text-[12px] bg-white" value={line.skuId || ''} onChange={e => handleLineChange('skuId', e.target.value)}>
-                                                            <option value="">Select SKU...</option>
-                                                            {availableSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                        </select>
+                                                        <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Qty</label>
+                                                        <input type="number" className="w-full p-1.5 border border-slate-300 rounded text-[12px]" value={line.qty || ''} onChange={e => handleLineChange('qty', e.target.value)} />
                                                     </div>
-                                                    <div className="grid grid-cols-3 gap-1.5">
-                                                        <div>
-                                                            <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Qty</label>
-                                                            <input type="number" className="w-full p-1.5 border border-slate-300 rounded text-[12px]" value={line.qty || ''} onChange={e => handleLineChange('qty', e.target.value)} />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Rate</label>
-                                                            <input type="number" className="w-full p-1.5 border border-slate-300 rounded text-[12px]" value={line.rate || ''} onChange={e => handleLineChange('rate', e.target.value)} />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Tax%</label>
-                                                            <input type="number" className="w-full p-1.5 border border-slate-300 rounded text-[12px]" value={line.taxRate || ''} onChange={e => handleLineChange('taxRate', e.target.value)} />
-                                                        </div>
+                                                    <div>
+                                                        <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Rate</label>
+                                                        <input type="number" className="w-full p-1.5 border border-slate-300 rounded text-[12px]" value={line.rate || ''} onChange={e => handleLineChange('rate', e.target.value)} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Tax%</label>
+                                                        <input type="number" className="w-full p-1.5 border border-slate-300 rounded text-[12px]" value={line.taxRate || ''} onChange={e => handleLineChange('taxRate', e.target.value)} />
                                                     </div>
                                                 </div>
                                                 {line.skuId && rQuotes.length > 0 && clients.some(c => c.id === (form.companyId || modal.data?.companyId)) && (
@@ -1291,10 +1366,17 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             <>
                                 <div>
                                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU</label>
-                                    <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
-                                        <option value="">Select SKU...</option>
-                                        {availableSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
+                                    <input 
+                                        list="sku-list-available"
+                                        className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold outline-none" 
+                                        placeholder="Search SKU..."
+                                        value={availableSkus.find(s => s.id === form.skuId)?.name || form.skuSearch || ''} 
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            const match = availableSkus.find(s => s.name === val);
+                                            setForm({ ...form, skuSearch: val, skuId: match ? match.id : '' });
+                                        }}
+                                    />
                                 </div>
                                 <div className="grid grid-cols-3 gap-2">
                                     <div>
@@ -1468,12 +1550,17 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                     <div className="space-y-3 p-3 bg-slate-50/50 rounded border border-slate-200">
                         <div>
                             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Linked SKU</label>
-                            <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
-                                <option value="">Select SKU...</option>
-                                {unlinkedSkus.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                ))}
-                            </select>
+                            <input 
+                                list="sku-list-unlinked"
+                                className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-semibold outline-none" 
+                                placeholder="Search SKU..."
+                                value={unlinkedSkus.find(s => s.id === form.skuId)?.name || form.skuSearch || ''} 
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    const match = unlinkedSkus.find(s => s.name === val);
+                                    setForm({ ...form, skuSearch: val, skuId: match ? match.id : '' });
+                                }}
+                            />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -1609,32 +1696,51 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                         {((form.recipientType || 'Vendor') === 'Vendor' || form.recipientType === 'Both') && (
                             <div>
                                 <label className="block text-[11px] font-bold text-purple-600 uppercase tracking-wide mb-1">Vendor</label>
-                                <select className="w-full p-2 border border-purple-200 bg-purple-50/10 rounded text-[13px] font-semibold" value={form.vendorId || ''} onChange={e => setForm({ ...form, vendorId: e.target.value })}>
-                                    <option value="">Select Vendor...</option>
-                                    {vendors.map(v => <option key={v.id} value={v.id}>{v.companyName}</option>)}
-                                </select>
+                                <input 
+                                    list="vendor-list-all"
+                                    className="w-full p-2 border border-purple-200 bg-purple-50/10 rounded text-[13px] font-semibold outline-none" 
+                                    placeholder="Search Vendor..."
+                                    value={vendors.find(v => v.id === form.vendorId)?.companyName || form.vendorSearch || ''} 
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const match = vendors.find(v => v.companyName === val);
+                                        setForm({ ...form, vendorSearch: val, vendorId: match ? match.id : '' });
+                                    }}
+                                />
                             </div>
                         )}
 
                         {((form.recipientType || 'Vendor') === 'Client' || form.recipientType === 'Both') && (
                             <div>
                                 <label className="block text-[11px] font-bold text-blue-600 uppercase tracking-wide mb-1">Client</label>
-                                <select className="w-full p-2 border border-blue-200 bg-blue-50/10 rounded text-[13px] font-semibold" value={form.clientId || ''} onChange={e => setForm({ ...form, clientId: e.target.value })}>
-                                    <option value="">Select Client...</option>
-                                    {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
-                                </select>
+                                <input 
+                                    list="client-list-all"
+                                    className="w-full p-2 border border-blue-200 bg-blue-50/10 rounded text-[13px] font-semibold outline-none" 
+                                    placeholder="Search Client..."
+                                    value={clients.find(c => c.id === form.clientId)?.companyName || form.clientSearch || ''} 
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const match = clients.find(c => c.companyName === val);
+                                        setForm({ ...form, clientSearch: val, clientId: match ? match.id : '' });
+                                    }}
+                                />
                             </div>
                         )}
                     </div>
 
                     <div>
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">SKU Selection</label>
-                        <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-bold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
-                            <option value="">Select SKU...</option>
-                            {cleanSkus.map(s => (
-                                <option key={s.id} value={s.id}>{s.name}</option>
-                            ))}
-                        </select>
+                        <input 
+                            list="sku-list-all"
+                            className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-bold outline-none" 
+                            placeholder="Search SKU..."
+                            value={cleanSkus.find(s => s.id === form.skuId)?.name || form.skuSearch || ''} 
+                            onChange={e => {
+                                const val = e.target.value;
+                                const match = cleanSkus.find(s => s.name === val);
+                                setForm({ ...form, skuSearch: val, skuId: match ? match.id : '' });
+                            }}
+                        />
                     </div>
 
                     {/* Auto-Derived Details Block */}
@@ -1734,12 +1840,17 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                         <div className="space-y-3">
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Select Marketplace SKU</label>
-                                <select className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-bold" value={form.skuId || ''} onChange={e => setForm({ ...form, skuId: e.target.value })}>
-                                    <option value="">Select SKU...</option>
-                                    {cleanSkus.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name}</option>
-                                    ))}
-                                </select>
+                                <input 
+                                    list="sku-list-all"
+                                    className="w-full p-2 border border-slate-300 rounded text-[13px] bg-white font-bold outline-none" 
+                                    placeholder="Search SKU..."
+                                    value={cleanSkus.find(s => s.id === form.skuId)?.name || form.skuSearch || ''} 
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const match = cleanSkus.find(s => s.name === val);
+                                        setForm({ ...form, skuSearch: val, skuId: match ? match.id : '' });
+                                    }}
+                                />
                             </div>
 
                             {form.skuId && (
@@ -1799,7 +1910,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                         <div>
                             <label className="block text-[11px] font-bold text-purple-600 uppercase tracking-wide mb-1">Preferred Vendor</label>
                             <input
-                                list="vendor-list-rfq"
+                                list="vendor-list-all"
                                 className="w-full p-2 border border-purple-200 bg-purple-50/5 rounded text-[13px] font-semibold"
                                 value={form.vendorNameInput || (vendors.find(v => v.id === form.vendorId)?.companyName || '')}
                                 onChange={e => {
@@ -1810,9 +1921,6 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                                 }}
                                 placeholder="Search vendors..."
                             />
-                            <datalist id="vendor-list-rfq">
-                                {vendors.map(v => <option key={v.id} value={v.companyName} />)}
-                            </datalist>
                         </div>
                     </div>
                 </div>
@@ -1928,33 +2036,33 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                     {form.sourceType === 'Vendor' && (
                         <div>
                             <label className="block text-[11px] font-bold text-purple-600 uppercase tracking-wide mb-1">Select Vendor <span className="text-red-500">*</span></label>
-                            <select
-                                className="w-full p-2 border border-purple-200 rounded text-[13px] bg-purple-50/30 font-semibold"
-                                value={form.sourceId || ''}
-                                onChange={e => {
-                                    const v = vendors.find(x => x.id === e.target.value);
-                                    setForm({ ...form, sourceId: v?.id, sourceName: v?.companyName || '' });
-                                }}
-                            >
-                                <option value="">Select Vendor...</option>
-                                {vendors.map(v => <option key={v.id} value={v.id}>{v.companyName}</option>)}
-                            </select>
+                                <input 
+                                    list="vendor-list-all"
+                                    className="w-full p-2 border border-purple-200 rounded text-[13px] bg-purple-50/30 font-semibold outline-none" 
+                                    placeholder="Search Vendor..."
+                                    value={vendors.find(v => v.id === form.sourceId)?.companyName || form.sourceSearch || ''} 
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const match = vendors.find(v => v.companyName === val);
+                                        setForm({ ...form, sourceSearch: val, sourceId: match ? match.id : '', sourceName: match ? match.companyName : '' });
+                                    }}
+                                />
                         </div>
                     )}
                     {form.sourceType === 'Client' && (
                         <div>
                             <label className="block text-[11px] font-bold text-emerald-600 uppercase tracking-wide mb-1">Select Client <span className="text-red-500">*</span></label>
-                            <select
-                                className="w-full p-2 border border-emerald-200 rounded text-[13px] bg-emerald-50/30 font-semibold"
-                                value={form.sourceId || ''}
-                                onChange={e => {
-                                    const c = clients.find(x => x.id === e.target.value);
-                                    setForm({ ...form, sourceId: c?.id, sourceName: c?.companyName || '' });
-                                }}
-                            >
-                                <option value="">Select Client...</option>
-                                {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
-                            </select>
+                                <input 
+                                    list="client-list-all"
+                                    className="w-full p-2 border border-emerald-200 rounded text-[13px] bg-emerald-50/30 font-semibold outline-none" 
+                                    placeholder="Search Client..."
+                                    value={clients.find(c => c.id === form.sourceId)?.companyName || form.sourceSearch || ''} 
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const match = clients.find(c => c.companyName === val);
+                                        setForm({ ...form, sourceSearch: val, sourceId: match ? match.id : '', sourceName: match ? match.companyName : '' });
+                                    }}
+                                />
                         </div>
                     )}
                     {form.sourceType === 'ThirdParty' && (
@@ -1980,7 +2088,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             }}
                         >
                             <option value="">Select SKU...</option>
-                            {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            {sortedSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
 
@@ -2069,33 +2177,33 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                     {form.destinationType === 'Vendor' && (
                         <div>
                             <label className="block text-[11px] font-bold text-purple-600 uppercase tracking-wide mb-1">Select Vendor <span className="text-red-500">*</span></label>
-                            <select
-                                className="w-full p-2 border border-purple-200 rounded text-[13px] bg-purple-50/30 font-semibold"
-                                value={form.destinationId || ''}
-                                onChange={e => {
-                                    const v = vendors.find(x => x.id === e.target.value);
-                                    setForm({ ...form, destinationId: v?.id, destinationName: v?.companyName || '' });
-                                }}
-                            >
-                                <option value="">Select Vendor...</option>
-                                {vendors.map(v => <option key={v.id} value={v.id}>{v.companyName}</option>)}
-                            </select>
+                                <input 
+                                    list="vendor-list-all"
+                                    className="w-full p-2 border border-purple-200 rounded text-[13px] bg-purple-50/30 font-semibold outline-none" 
+                                    placeholder="Search Vendor..."
+                                    value={vendors.find(v => v.id === form.destinationId)?.companyName || form.destSearch || ''} 
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const match = vendors.find(v => v.companyName === val);
+                                        setForm({ ...form, destSearch: val, destinationId: match ? match.id : '', destinationName: match ? match.companyName : '' });
+                                    }}
+                                />
                         </div>
                     )}
                     {form.destinationType === 'Client' && (
                         <div>
                             <label className="block text-[11px] font-bold text-emerald-600 uppercase tracking-wide mb-1">Select Client <span className="text-red-500">*</span></label>
-                            <select
-                                className="w-full p-2 border border-emerald-200 rounded text-[13px] bg-emerald-50/30 font-semibold"
-                                value={form.destinationId || ''}
-                                onChange={e => {
-                                    const c = clients.find(x => x.id === e.target.value);
-                                    setForm({ ...form, destinationId: c?.id, destinationName: c?.companyName || '' });
-                                }}
-                            >
-                                <option value="">Select Client...</option>
-                                {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
-                            </select>
+                                <input 
+                                    list="client-list-all"
+                                    className="w-full p-2 border border-emerald-200 rounded text-[13px] bg-emerald-50/30 font-semibold outline-none" 
+                                    placeholder="Search Client..."
+                                    value={clients.find(c => c.id === form.destinationId)?.companyName || form.destSearch || ''} 
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const match = clients.find(c => c.companyName === val);
+                                        setForm({ ...form, destSearch: val, destinationId: match ? match.id : '', destinationName: match ? match.companyName : '' });
+                                    }}
+                                />
                         </div>
                     )}
                     {form.destinationType === 'ThirdParty' && (
@@ -2132,7 +2240,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             }}
                         >
                             <option value="">Select SKU...</option>
-                            {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            {sortedSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
 
@@ -2251,33 +2359,33 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                     {form.partyType === 'Vendor' && (
                         <div>
                             <label className="block text-[11px] font-bold text-purple-600 uppercase tracking-wide mb-1">Select Vendor <span className="text-red-500">*</span></label>
-                            <select
-                                className="w-full p-2 border border-purple-200 rounded text-[13px] bg-purple-50/30 font-semibold"
-                                value={form.partyId || ''}
-                                onChange={e => {
-                                    const v = vendors.find(x => x.id === e.target.value);
-                                    setForm({ ...form, partyId: v?.id, partyName: v?.companyName || '' });
-                                }}
-                            >
-                                <option value="">Select Vendor...</option>
-                                {vendors.map(v => <option key={v.id} value={v.id}>{v.companyName}</option>)}
-                            </select>
+                                <input 
+                                    list="vendor-list-all"
+                                    className="w-full p-2 border border-purple-200 rounded text-[13px] bg-purple-50/30 font-semibold outline-none" 
+                                    placeholder="Search Vendor..."
+                                    value={vendors.find(v => v.id === form.partyId)?.companyName || form.partySearch || ''} 
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const match = vendors.find(v => v.companyName === val);
+                                        setForm({ ...form, partySearch: val, partyId: match ? match.id : '', partyName: match ? match.companyName : '' });
+                                    }}
+                                />
                         </div>
                     )}
                     {form.partyType === 'Client' && (
                         <div>
                             <label className="block text-[11px] font-bold text-emerald-600 uppercase tracking-wide mb-1">Select Client <span className="text-red-500">*</span></label>
-                            <select
-                                className="w-full p-2 border border-emerald-200 rounded text-[13px] bg-emerald-50/30 font-semibold"
-                                value={form.partyId || ''}
-                                onChange={e => {
-                                    const c = clients.find(x => x.id === e.target.value);
-                                    setForm({ ...form, partyId: c?.id, partyName: c?.companyName || '' });
-                                }}
-                            >
-                                <option value="">Select Client...</option>
-                                {clients.map(c => <option key={c.id} value={c.id}>{c.companyName}</option>)}
-                            </select>
+                                <input 
+                                    list="client-list-all"
+                                    className="w-full p-2 border border-emerald-200 rounded text-[13px] bg-emerald-50/30 font-semibold outline-none" 
+                                    placeholder="Search Client..."
+                                    value={clients.find(c => c.id === form.partyId)?.companyName || form.partySearch || ''} 
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        const match = clients.find(c => c.companyName === val);
+                                        setForm({ ...form, partySearch: val, partyId: match ? match.id : '', partyName: match ? match.companyName : '' });
+                                    }}
+                                />
                         </div>
                     )}
                     {form.partyType === 'ThirdParty' && (
@@ -2316,7 +2424,7 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                             }}
                         >
                             <option value="">Select SKU...</option>
-                            {cleanSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            {sortedSkus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
 
@@ -2379,6 +2487,22 @@ export const AppModal = ({ modal, setModal, data, actions }) => {
                 <div className="flex-1 overflow-auto p-6 scroller">
                     {renderContent()}
                 </div>
+                {/* Global Datalists for Searchable Inputs */}
+                <datalist id="sku-list-all">
+                    {sortedSkus.map(s => <option key={s.id} value={s.name} />)}
+                </datalist>
+                <datalist id="sku-list-unlinked">
+                    {sortedUnlinkedSkus.map(s => <option key={s.id} value={s.name} />)}
+                </datalist>
+                <datalist id="sku-list-available">
+                    {sortedAvailableSkus.map(s => <option key={s.id} value={s.name} />)}
+                </datalist>
+                <datalist id="client-list-all">
+                    {sortedClients.map(c => <option key={c.id} value={c.companyName} />)}
+                </datalist>
+                <datalist id="vendor-list-all">
+                    {sortedVendors.map(v => <option key={v.id} value={v.companyName} />)}
+                </datalist>
                 <div className="flex justify-between items-center px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
                     <div>
                         {modal.isEdit && modal.type === 'task' && (

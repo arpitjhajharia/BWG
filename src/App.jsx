@@ -144,7 +144,7 @@ function App() {
             {activeTab === 'clients' && <CompanyMaster type="client" data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} currentUser={currentUser} />}
             {activeTab === 'orders' && <OrderMaster data={data} actions={actions} setModal={setModal} setDetailView={setDetailView} />}
             {activeTab === 'quotes' && <QuotesTab data={data} actions={actions} setModal={setModal} currentUser={currentUser} />}
-            {activeTab === 'tasks' && <TaskBoard data={data} actions={actions} setModal={setModal} />}
+            {activeTab === 'tasks' && <TaskBoard data={data} actions={actions} setModal={setModal} currentUser={currentUser} />}
             {activeTab === 'inventory' && <Inventory data={data} actions={actions} setModal={setModal} />}
             {activeTab === 'help' && <HelpCenter />}
             {activeTab === 'admin' && <AdminPanel currentUser={currentUser} data={data} actions={actions} setModal={setModal} />}

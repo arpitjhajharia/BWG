@@ -184,7 +184,7 @@ export const QuotesTab = ({ data, actions, setModal, currentUser }) => {
                                         const totalRevenue = q.sellingPrice * q.moq;
                                         const totalCost = normalizedCost * q.moq;
                                         const totalMargin = totalRevenue - totalCost;
-                                        const marginPct = totalCost ? ((totalMargin / totalCost) * 100).toFixed(1) : 0;
+                                        const marginPct = totalRevenue ? ((totalMargin / totalRevenue) * 100).toFixed(1) : 0;
                                         const isFirst = idx === 0;
                                         const isLast = idx === groupQuotes.length - 1;
 
@@ -310,7 +310,7 @@ export const QuotesTab = ({ data, actions, setModal, currentUser }) => {
                         const totalRevenue = q.sellingPrice * q.moq;
                         const totalCost = q.baseCostPrice * q.moq;
                         const totalMargin = totalRevenue - totalCost;
-                        const marginPct = totalCost ? ((totalMargin / totalCost) * 100).toFixed(1) : 0;
+                        const marginPct = totalRevenue ? ((totalMargin / totalRevenue) * 100).toFixed(1) : 0;
 
                         return (
                             <div key={q.id} className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-sm active:bg-slate-50 transition-colors">
